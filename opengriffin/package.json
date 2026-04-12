@@ -1,0 +1,21 @@
+{
+  "name": "opengriffin",
+  "version": "1.0.0",
+  "description": "OpenGriffin — Secure AI Agent Platform. Telegram-first, always-on, zero CVEs.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "setup-db": "node src/setup-db.js",
+    "test": "node src/test-flow.js"
+  },
+  "dependencies": {
+    "grammy": "^1.35.0",
+    "stripe": "^17.5.0",
+    "sql.js": "^1.12.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.0",
+    "uuid": "^11.1.0"
+  }
+}

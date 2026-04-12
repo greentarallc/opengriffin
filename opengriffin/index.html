@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>OpenGriffin — Secure AI Agents</title>
+<meta name="description" content="16+ AI models on Telegram. Claude, GPT, Gemini, DeepSeek + image and video generation. Always-on agents with persistent memory, scheduled tasks, and multi-agent switching."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:    #08080a;
+  --bg2:   #111116;
+  --bg3:   #19191f;
+  --surface: #1e1e26;
+  --border: #2a2a34;
+  --border2:#3d3d4a;
+  --ivory: #f0ece4;
+  --cream: #d8d2c6;
+  --muted: #7a7680;
+  --dim:   #4a4650;
+  --copper:#d4a056;
+  --copper-glow: rgba(212,160,86,.08);
+  --danger:#e74c3c;
+  --success:#2ecc71;
+  --serif: 'Playfair Display',Georgia,serif;
+  --sans:  'Sora',system-ui,sans-serif;
+  --mono:  'JetBrains Mono',monospace;
+  --radius:12px;
+  --radius-lg:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--ivory);line-height:1.7;overflow-x:hidden}
+
+/* Grain overlay */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:.5}
+
+/* Scroll reveal */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}
+.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}
+.reveal-delay-4{transition-delay:.4s}
+
+/* NAV */
+nav{position:fixed;top:0;width:100%;z-index:100;padding:18px 32px;display:flex;align-items:center;justify-content:space-between;
+  background:rgba(8,8,10,.7);backdrop-filter:blur(24px) saturate(1.4);border-bottom:1px solid rgba(255,255,255,.04)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ivory)}
+.logo-mark{width:36px;height:36px;border:2px solid var(--copper);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.logo-text{font-family:var(--serif);font-size:1.1rem;font-weight:700;letter-spacing:-.01em}
+.nav-r{display:flex;gap:32px;align-items:center}
+.nav-r a{color:var(--muted);text-decoration:none;font-size:.82rem;font-weight:500;letter-spacing:.02em;transition:color .2s}
+.nav-r a:hover{color:var(--copper)}
+.nav-cta{background:var(--copper)!important;color:var(--bg)!important;padding:9px 22px;border-radius:8px;font-weight:700!important}
+.nav-cta:hover{opacity:.9}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:140px 24px 100px;position:relative}
+.hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:900px;height:900px;
+  background:radial-gradient(ellipse at center,var(--copper-glow) 0%,transparent 60%);pointer-events:none;opacity:.6}
+
+/* Griffin silhouette watermark */
+.hero::after{content:'🦁';position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);font-size:min(40vw,320px);opacity:.018;pointer-events:none;filter:grayscale(1)}
+
+.hero-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 18px;border:1px solid var(--border);border-radius:100px;font-size:.75rem;font-weight:500;color:var(--muted);margin-bottom:36px;background:var(--bg2)}
+.hero-pill .dot{width:6px;height:6px;background:var(--success);border-radius:50%;animation:pulse 2.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+.hero h1{font-family:var(--serif);font-size:clamp(3rem,8vw,6rem);font-weight:900;line-height:1.0;letter-spacing:-.04em;max-width:780px;margin-bottom:4px}
+.hero h1 .accent{color:var(--copper);font-style:italic;font-weight:700}
+
+.type-wrap{height:clamp(2rem,4.5vw,3.2rem);display:flex;align-items:center;justify-content:center;margin:12px 0 32px;overflow:hidden}
+.type-text{font-family:var(--serif);font-size:clamp(1.6rem,3.5vw,2.6rem);font-weight:400;font-style:italic;color:var(--copper);white-space:nowrap}
+.type-cursor{font-family:var(--mono);font-size:clamp(1.6rem,3.5vw,2.6rem);color:var(--copper);animation:blink .6s step-end infinite;font-weight:300;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.hero p.sub{font-size:1.05rem;color:var(--muted);max-width:500px;line-height:1.8;margin-bottom:40px;font-weight:300}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:10px;font-size:.9rem;font-weight:600;text-decoration:none;border:none;cursor:pointer;font-family:var(--sans);transition:all .3s cubic-bezier(.16,1,.3,1)}
+.btn-copper{background:var(--copper);color:var(--bg)}
+.btn-copper:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(212,160,86,.2)}
+.btn-outline{background:transparent;color:var(--ivory);border:1px solid var(--border2)}
+.btn-outline:hover{border-color:var(--copper);color:var(--copper)}
+
+.hero-nums{display:flex;gap:48px;margin-top:56px;flex-wrap:wrap;justify-content:center}
+.hero-num{text-align:center}
+.hero-num .val{font-family:var(--mono);font-size:1.6rem;font-weight:500;color:var(--copper);display:block}
+.hero-num .lbl{font-size:.68rem;color:var(--dim);text-transform:uppercase;letter-spacing:.14em;margin-top:4px}
+
+/* SECTIONS */
+section{padding:120px 24px}
+.container{max-width:1040px;margin:0 auto}
+.label{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.2em;color:var(--copper);margin-bottom:14px;font-weight:500}
+.title{font-family:var(--serif);font-size:clamp(2rem,4.5vw,3rem);font-weight:900;line-height:1.1;letter-spacing:-.03em;margin-bottom:16px}
+.desc{font-size:.95rem;color:var(--muted);max-width:480px;line-height:1.8;font-weight:300;margin-left:auto;margin-right:auto}
+.alt{background:var(--bg2)}
+
+/* DANGER GRID */
+.danger-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:48px}
+.danger-card{background:rgba(231,76,60,.03);border:1px solid rgba(231,76,60,.15);border-radius:var(--radius);padding:28px 24px;transition:border-color .3s}
+.danger-card:hover{border-color:rgba(231,76,60,.4)}
+.danger-card .ic{font-size:1.6rem;margin-bottom:12px;display:block}
+.danger-card h3{font-size:.95rem;font-weight:700;color:var(--danger);margin-bottom:6px}
+.danger-card p{font-size:.82rem;color:var(--muted);line-height:1.6}
+
+/* ARCH TERMINAL */
+.terminal{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:48px}
+.terminal-bar{background:var(--bg3);padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.terminal-dot{width:10px;height:10px;border-radius:50%}
+.terminal-dot.r{background:#e74c3c}.terminal-dot.y{background:#f39c12}.terminal-dot.g{background:#2ecc71}
+.terminal-title{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin-left:8px}
+.terminal-body{padding:28px 24px;font-family:var(--mono);font-size:.78rem;line-height:2;color:var(--muted);overflow-x:auto}
+.terminal-body .hl{color:var(--copper)}
+.terminal-body .gr{color:var(--success)}
+.terminal-body .rd{color:var(--danger)}
+.terminal-body .iv{color:var(--ivory)}
+
+/* FEATURES */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:48px;background:var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.feat{background:var(--bg);padding:36px 28px;transition:background .3s}
+.feat:hover{background:var(--bg2)}
+.feat .ic{font-size:1.8rem;margin-bottom:16px;display:block}
+.feat h3{font-size:.95rem;font-weight:700;margin-bottom:6px;letter-spacing:-.01em}
+.feat p{font-size:.82rem;color:var(--muted);line-height:1.65}
+
+/* AGENTS SCROLL */
+.agents-row{display:flex;gap:14px;margin-top:40px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.agent-card{min-width:200px;flex-shrink:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;scroll-snap-align:start;transition:border-color .3s,transform .3s}
+.agent-card:hover{border-color:var(--copper);transform:translateY(-4px)}
+.agent-card .ae{font-size:2rem;margin-bottom:12px;display:block}
+.agent-card .an{font-family:var(--serif);font-size:1rem;font-weight:700;margin-bottom:4px}
+.agent-card .ad{font-size:.78rem;color:var(--muted);line-height:1.55}
+
+/* STEPS */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:48px;counter-reset:s}
+.step-card{background:var(--bg);padding:32px 24px;position:relative;overflow:hidden}
+.step-card::before{counter-increment:s;content:counter(s);font-family:var(--serif);font-size:5rem;font-weight:900;color:var(--copper);opacity:.06;position:absolute;top:-10px;right:8px;line-height:1}
+.step-card h3{font-size:.92rem;font-weight:700;margin-bottom:6px}
+.step-card p{font-size:.8rem;color:var(--muted);line-height:1.6}
+
+/* PRICING */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+.p-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px 28px;display:flex;flex-direction:column;position:relative;transition:all .3s}
+.p-card:hover{border-color:var(--muted);transform:translateY(-4px)}
+.p-card.pop{border-color:var(--copper);background:linear-gradient(to bottom,rgba(212,160,86,.04),var(--bg2))}
+.p-card.pop::after{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--copper),transparent)}
+.p-label{font-family:var(--mono);font-size:.65rem;text-transform:uppercase;letter-spacing:.16em;color:var(--copper);margin-bottom:4px}
+.p-name{font-family:var(--serif);font-size:1.4rem;font-weight:700;margin-bottom:4px}
+.p-desc{font-size:.8rem;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.p-price{display:flex;align-items:baseline;gap:2px;margin-bottom:24px}
+.p-price .cur{font-size:.9rem;color:var(--muted)}
+.p-price .amt{font-size:3rem;font-weight:700;letter-spacing:-.04em}
+.p-price .per{font-size:.8rem;color:var(--dim);margin-left:4px}
+.p-feats{list-style:none;margin-bottom:28px;flex:1}
+.p-feats li{font-size:.82rem;color:var(--cream);padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:flex-start;gap:10px}
+.p-feats li::before{content:'→';color:var(--copper);font-family:var(--mono);flex-shrink:0}
+.p-card .btn{width:100%;justify-content:center}
+
+/* FAQ */
+.faq{margin-top:48px;max-width:660px}
+.faq-item{border-bottom:1px solid var(--border)}
+.faq-q{width:100%;background:none;border:none;color:var(--ivory);font-family:var(--sans);font-size:.92rem;font-weight:600;text-align:left;padding:20px 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;transition:color .2s}
+.faq-q:hover{color:var(--copper)}
+.faq-q .arr{font-family:var(--mono);font-size:.7rem;color:var(--dim);transition:transform .3s}
+.faq-item.open .arr{transform:rotate(90deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.16,1,.3,1)}
+.faq-item.open .faq-a{max-height:300px}
+.faq-a p{font-size:.85rem;color:var(--muted);line-height:1.75;padding-bottom:20px}
+
+/* CALLOUT */
+.callout{padding:28px 32px;border:1px solid var(--border);border-radius:var(--radius-lg);margin-top:40px;position:relative;overflow:hidden}
+.callout::before{content:'';position:absolute;top:0;left:0;right:0;height:1px}
+.callout.green{border-color:rgba(46,204,113,.2)}.callout.green::before{background:linear-gradient(90deg,transparent,var(--success),transparent)}
+.callout.red{border-color:rgba(231,76,60,.2)}.callout.red::before{background:linear-gradient(90deg,transparent,var(--danger),transparent)}
+.callout strong{font-size:1rem;display:block;margin-bottom:6px}
+.callout.green strong{color:var(--success)}.callout.red strong{color:var(--danger)}
+.callout p{font-size:.86rem;color:var(--muted);line-height:1.7}
+
+/* CTA */
+.cta-section{text-align:center;position:relative}
+.cta-section::before{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,var(--copper-glow),transparent 70%);pointer-events:none}
+
+/* FOOTER */
+footer{padding:48px 24px;border-top:1px solid var(--border);text-align:center}
+.f-links{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
+.f-links a{color:var(--dim);text-decoration:none;font-size:.78rem;transition:color .2s}
+.f-links a:hover{color:var(--copper)}
+.f-copy{font-size:.7rem;color:var(--dim)}
+.f-disc{font-size:.65rem;color:#333;max-width:440px;margin:6px auto 0;line-height:1.6}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .nav-r{display:none}
+  .danger-grid,.feat-grid,.price-grid{grid-template-columns:1fr}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .hero-nums{gap:28px}
+  section{padding:80px 20px}
+}
+@media(max-width:600px){
+  .steps{grid-template-columns:1fr}
+  .hero{padding:120px 20px 60px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="logo">
+    <div class="logo-mark">🦁</div>
+    <span class="logo-text">OpenGriffin</span>
+  </a>
+  <div class="nav-r">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="#pricing" class="nav-cta">Try Free</a>
+  </div>
+</nav>
+
+<!-- ════════ HERO ════════ -->
+<section class="hero">
+  <div class="hero-pill"><span class="dot"></span> Now accepting early access</div>
+  <h1>16 AI models.<br/>One Telegram bot.<br/><span class="accent">Always on.</span></h1>
+  <div class="type-wrap">
+    <span id="typed" class="type-text"></span><span class="type-cursor">|</span>
+  </div>
+  <p class="sub">Claude, GPT, Gemini, DeepSeek, Llama, Grok + image &amp; video generation — all through one Telegram bot with persistent memory, scheduled tasks,.</p>
+  <div class="hero-btns">
+    <a href="#pricing" class="btn btn-copper">Try free for 24 hours →</a>
+    <a href="#features" class="btn btn-outline">See features</a>
+  </div>
+  <div class="hero-nums">
+    <div class="hero-num"><span class="val">16+</span><span class="lbl">Chat models</span></div>
+    <div class="hero-num"><span class="val">6</span><span class="lbl">Image models</span></div>
+    <div class="hero-num"><span class="val">4</span><span class="lbl">Video models</span></div>
+    <div class="hero-num"><span class="val">24/7</span><span class="lbl">Always on</span></div>
+  </div>
+</section>
+
+<!-- ════════ FEATURES ════════ -->
+<section id="features" class="alt">
+  <div class="container">
+    <div class="label reveal">Capabilities</div>
+    <h2 class="title reveal reveal-delay-1">Chat. Images. Videos.<br/>All in one bot.</h2>
+    <div class="feat-grid reveal reveal-delay-2">
+      <div class="feat">
+        <span class="ic">🔀</span>
+        <h3>16+ AI models, one chat</h3>
+        <p>Claude, GPT, Gemini, DeepSeek, Llama, Grok, Mistral, Qwen, Perplexity — switch mid-conversation. Auto mode picks the best one.</p>
+      </div>
+      <div class="feat">
+        <span class="ic">🎨</span>
+        <h3>Image generation</h3>
+        <p>FLUX, Stable Diffusion, Recraft, Ideogram — generate images right in Telegram. Just describe what you want.</p>
+      </div>
+      <div class="feat">
+        <span class="ic">🎬</span>
+        <h3>Video generation</h3>
+        <p>Kling, Hailuo, Wan, LTX — create AI videos from text or images, delivered straight to your chat.</p>
+      </div>
+      <div class="feat">
+        <span class="ic">🧠</span>
+        <h3>Persistent memory</h3>
+        <p>Your agent remembers everything forever. Names, preferences, context — across sessions, across models. Never resets.</p>
+      </div>
+      <div class="feat">
+        <span class="ic">⏰</span>
+        <h3>Always-on agents</h3>
+        <p>Morning briefings, task reminders, evening reviews. Your agents work while you sleep — scheduled via cron, 24/7.</p>
+      </div>
+      <div class="feat">
+        <span class="ic">🔒</span>
+        <h3>Zero CVEs</h3>
+        <p>Built from scratch — 1,771 lines. No inherited vulnerabilities. No malicious skills. Your data never leaves your server.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════ AGENTS ════════ -->
+<section>
+  <div class="container">
+    <div class="label reveal">Agents</div>
+    <h2 class="title reveal reveal-delay-1">Pre-built or custom.<br/>Switch in one command.</h2>
+    <p class="desc reveal reveal-delay-2" style="margin-bottom:0"><code style="background:var(--bg3);padding:3px 10px;border-radius:6px;font-family:var(--mono);font-size:.82rem;color:var(--copper)">/switch lead-hawk</code></p>
+    <div class="agents-row reveal reveal-delay-3">
+      <div class="agent-card"><span class="ae">📋</span><div class="an">Chief of Staff</div><div class="ad">Morning briefings, task tracking, calendar mgmt, weekly reviews.</div></div>
+      <div class="agent-card"><span class="ae">📧</span><div class="an">Inbox Ops</div><div class="ad">Email triage, draft replies in your voice, follow-up tracking.</div></div>
+      <div class="agent-card"><span class="ae">🦅</span><div class="an">Lead Hawk</div><div class="ad">Sales pipeline, lead follow-ups, outreach drafting, reports.</div></div>
+      <div class="agent-card"><span class="ae">📝</span><div class="an">Content Engine</div><div class="ad">Any input → tweets, LinkedIn posts, newsletters, captions.</div></div>
+      <div class="agent-card"><span class="ae">🔧</span><div class="an">Custom</div><div class="ad">Blank canvas. Any role, any personality, any workflow you define.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ HOW IT WORKS ════════ -->
+<section class="alt">
+  <div class="container">
+    <div class="label reveal">Setup</div>
+    <h2 class="title reveal reveal-delay-1">Live on Telegram<br/>in five minutes.</h2>
+    <div class="steps reveal reveal-delay-2">
+      <div class="step-card"><h3>Pick your plan</h3><p>Griffin Cloud $29/mo or Enterprise $149/mo. No contracts, cancel anytime.</p></div>
+      <div class="step-card"><h3>Create a Telegram bot</h3><p>@BotFather → /newbot → copy token. Takes 90 seconds. We walk you through it.</p></div>
+      <div class="step-card"><h3>We deploy your agent</h3><p>Dedicated server, configured and hardened. Live within 24-48 hours. Zero DevOps on your end.</p></div>
+      <div class="step-card"><h3>Start chatting</h3><p>Open Telegram, find your bot, send a message. Your agent remembers everything from here on.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ PRICING ════════ -->
+<section id="pricing">
+  <div class="container">
+    <div class="label reveal">Pricing</div>
+    <h2 class="title reveal reveal-delay-1">Simple pricing.<br/>Pay by the word.</h2>
+    <div class="price-grid reveal reveal-delay-2" style="grid-template-columns:repeat(3,1fr)">
+      
+      <div class="p-card pop">
+        <div class="p-label">Starter</div>
+        <div class="p-name">Griffin Cloud</div>
+        <div class="p-desc">We host, patch, backup, and monitor. You just use it.</div>
+        <div class="p-price"><span class="cur">$</span><span class="amt">19</span><span class="per">/mo</span></div>
+        <ul class="p-feats">
+          <li>100K words/month</li>
+          <li>All 16+ chat models</li>
+          <li>Image &amp; video generation</li>
+          <li>5 agent personas + custom</li>
+          <li>Persistent memory &amp; tasks</li>
+          <li>Always-on scheduler</li>
+          <li>Auto-updates &amp; backups</li>
+          <li>Email support</li>
+        </ul>
+        <a href="mailto:hello@opengriffin.com" class="btn btn-copper" style="width:100%;justify-content:center">Get started →</a>
+      </div>
+      <div class="p-card">
+        <div class="p-label">Popular</div>
+        <div class="p-name">Pro</div>
+        <div class="p-desc">For power users who rely on AI daily. 5x the words.</div>
+        <div class="p-price"><span class="cur">$</span><span class="amt">39</span><span class="per">/mo</span></div>
+        <ul class="p-feats">
+          <li>500K words/month</li>
+          <li>Everything in Starter</li>
+          <li>Priority support</li>
+          <li>Top-up available ($5/$10/$20)</li>
+          <li>Usage analytics dashboard</li>
+          <li>Advanced scheduling</li>
+        </ul>
+        <a href="mailto:hello@opengriffin.com" class="btn btn-copper" style="width:100%;justify-content:center">Get started →</a>
+      </div>
+      <div class="p-card">
+        <div class="p-label">Scale</div>
+        <div class="p-name">Agency</div>
+        <div class="p-desc">Custom agents, MCP integrations, dedicated support for your team.</div>
+        <div class="p-price"><span class="cur">$</span><span class="amt">79</span><span class="per">/mo</span></div>
+        <ul class="p-feats">
+          <li>2M words/month</li>
+          <li>Everything in Starter</li>
+          <li>Custom agent development</li>
+          <li>MCP integrations</li>
+          <li>Multi-user support</li>
+          <li>Dedicated Slack channel</li>
+        </ul>
+        <a href="mailto:hello@opengriffin.com" class="btn btn-outline" style="width:100%;justify-content:center">Contact us →</a>
+      </div>
+    </div>
+    <p class="reveal" style="text-align:center;margin-top:28px;color:var(--dim);font-size:.78rem">All plans: bring your own Anthropic API key. Typical usage: $5–30/mo. Cancel anytime.</p>
+  </div>
+</section>
+
+<!-- ════════ FAQ ════════ -->
+<section id="faq" class="alt">
+  <div class="container">
+    <div class="label reveal">FAQ</div>
+    <h2 class="title reveal reveal-delay-1">Questions</h2>
+    <div class="faq reveal reveal-delay-2">
+      <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What AI models are included?<span class="arr">→</span></button><div class="faq-a"><p>All plans include access to 16+ chat models (Claude, GPT-4o, GPT-5, Gemini, DeepSeek, Llama, Grok, Mistral, Qwen, Perplexity), 6 image generation models (FLUX, Recraft, Ideogram, Stable Diffusion), and 4 video models (Kling, Hailuo, Wan, LTX). Switch between models mid-conversation with a single command.</p></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')">How does word-based billing work?<span class="arr">→</span></button><div class="faq-a"><p>Each plan includes a monthly word allowance. Every model has a multiplier — cheaper models like DeepSeek (0.1x) give you 10x more words per dollar, while premium models like GPT-5 (4x) use words faster. You can stretch your plan by using efficient models for simple tasks and premium models only when you need them.</p></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')">How quickly can I get started?<span class="arr">→</span></button><div class="faq-a"><p>Once you sign up, we provision your dedicated instance within 24-48 hours. You get a Telegram bot connected to your AI agents with persistent memory, scheduled tasks, image and video generation — ready to use immediately.</p></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What can the agents actually do?<span class="arr">→</span></button><div class="faq-a"><p>Chat with 16+ AI models, generate images and videos, manage tasks, send morning briefings, track follow-ups, draft content, triage email, manage your calendar — and remember everything across sessions. Switch between specialized personas (Chief of Staff, Inbox Ops, Lead Hawk, Content Engine) or create your own custom agent.</p></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What happens if I hit my word limit?<span class="arr">→</span></button><div class="faq-a"><p>You can still view your history and memories, but new messages will be paused until the next billing cycle. You can upgrade your plan anytime or purchase a top-up ($5/$10/$20) to keep going immediately. We never lock you out of your existing data.</p></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')">Is my data safe?<span class="arr">→</span></button><div class="faq-a"><p>Your conversations and memories are stored on your dedicated server. We never read, sell, or train on your data. API calls go through OpenRouter and fal.ai with their respective privacy policies. You can request full data deletion at any time.</p></div></div>
+      <div class="faq-item"><button class="faq-q" onclick="this.parentElement.classList.toggle('open')">Can I cancel anytime?<span class="arr">→</span></button><div class="faq-a"><p>Yes. No contracts, no lock-in. Cancel from your dashboard and your service continues until the end of the billing period. Your data is preserved for 7 days after cancellation, then permanently deleted.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ CTA ════════ -->
+<section class="cta-section">
+  <div class="container" style="position:relative;z-index:1">
+    <div class="label reveal">Get started</div>
+    <h2 class="title reveal reveal-delay-1" style="max-width:500px;margin-left:auto;margin-right:auto">Your AI agents.<br/>Five minutes away.</h2>
+    <p class="desc reveal reveal-delay-2" style="margin-bottom:36px">All the best AI models. One Telegram bot. Starting at $19/mo.</p>
+    <div class="reveal reveal-delay-3" style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+      <a href="mailto:hello@opengriffin.com" class="btn btn-copper">Get started →</a>
+      <a href="#pricing" class="btn btn-outline">See all plans</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div style="margin-bottom:28px">
+    <div style="font-family:var(--serif);font-size:1.4rem;font-weight:700;margin-bottom:4px">Your AI agents. Five minutes away.</div>
+    <p style="font-size:.85rem;color:var(--muted)">16+ models. Always-on. All through Telegram.</p>
+  </div>
+  <div class="f-links">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="mailto:hello@opengriffin.com">Contact</a>
+  </div>
+  <div class="f-copy">© 2026 OpenGriffin. All rights reserved.</div>
+  <div class="f-disc">Not affiliated with Anthropic, OpenAI, or Google.</div>
+</footer>
+
+<script>
+/* Typewriter */
+const phrases=["triages your inbox","generates product images","follows up with leads","creates AI videos","writes your newsletter","switches to GPT-5 mid-chat","drafts proposals","generates social media graphics","manages your calendar","researches with Perplexity","sends morning briefings","builds weekly reports","runs your back office"];
+let pi=0,ci=0,del=false;const el=document.getElementById('typed');function tw(){const c=phrases[pi];if(!del){el.textContent=c.substring(0,ci+1);ci++;if(ci===c.length){del=true;setTimeout(tw,2400);return;}setTimeout(tw,55+Math.random()*25);}else{el.textContent=c.substring(0,ci-1);ci--;if(ci===0){del=false;pi=(pi+1)%phrases.length;setTimeout(tw,500);return;}setTimeout(tw,22);}}
+tw();
+var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el);});
+</script>
+</body>
+</html>
