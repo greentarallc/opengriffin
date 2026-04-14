@@ -6,7 +6,7 @@
 
 import 'dotenv/config';
 import { Memory } from './memory.js';
-import { ClaudeClient } from './claude-client.js';
+import { LLMRouter } from './llm-router.js';
 import { BUILTIN_TOOLS, createToolHandler } from './tools.js';
 import { getAgent, listAgents, buildSystemPrompt } from './agents.js';
 
@@ -78,25 +78,26 @@ async function runTests() {
 
   // ── Test 4: Claude API (requires API key) ──
   console.log('── Test 4: Claude API ──');
-  if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY.includes('your_')) {
-    console.log('   ⏭️  Skipped (no API key configured)');
-    console.log('   Set ANTHROPIC_API_KEY in .env to test Claude integration.\n');
+  if (!process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY.includes('your_')) {
+    console.log('   ⏭️  Skipped (no OPENROUTER_API_KEY configured)');
+    console.log('   Set OPENROUTER_API_KEY in .env to test LLM integration.\n');
   } else {
     try {
-      const claude = new ClaudeClient(process.env.ANTHROPIC_API_KEY, process.env.CLAUDE_MODEL);
+      const llm = new LLMRouter(process.env.OPENROUTER_API_KEY);
 
-      const response = await claude.chat(
+      const response = await llm.chat(
+        'claude-haiku',
         buildSystemPrompt('chief-of-staff', allMem),
         [{ role: 'user', content: 'Hi! Give me a very brief morning briefing. Keep it under 50 words.' }],
         BUILTIN_TOOLS,
         toolHandler,
       );
 
-      console.log(`   ✅ Claude response (${response.tokens} tokens):`);
+      console.log(`   ✅ LLM response (${response.tokens} tokens, model: ${response.modelName}):`);
       console.log(`   "${response.text.substring(0, 200)}${response.text.length > 200 ? '...' : ''}"`);
-      console.log('   ✅ Claude API: PASSED\n');
+      console.log('   ✅ LLM API: PASSED\n');
     } catch (err) {
-      console.log(`   ❌ Claude API error: ${err.message}\n`);
+      console.log(`   ❌ LLM API error: ${err.message}\n`);
     }
   }
 

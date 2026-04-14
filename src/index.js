@@ -5,6 +5,7 @@
 // ══════════════════════════════════════════
 
 import 'dotenv/config';
+import { createServer } from 'http';
 import { Bot } from 'grammy';
 import { Memory } from './memory.js';
 import { LLMRouter, listModels, getModel, AUTO_MODEL } from './llm-router.js';
@@ -393,6 +394,53 @@ bot.on('message:text', async (ctx) => {
     else await ctx.reply('❌ Something went wrong. Try again or switch models with /models');
   }
 });
+
+// ── Stripe webhook HTTP server ────────────
+if (billing.enabled) {
+  const webhookServer = createServer(async (req, res) => {
+    if (req.method === 'POST' && req.url === '/webhook') {
+      const chunks = [];
+      req.on('data', chunk => chunks.push(chunk));
+      req.on('end', async () => {
+        const rawBody = Buffer.concat(chunks);
+        const signature = req.headers['stripe-signature'];
+        try {
+          const result = await billing.handleWebhook(rawBody, signature);
+          if (result?.type === 'subscription') {
+            await bot.api.sendMessage(result.userId,
+              `✅ *Subscribed to ${result.planId} plan!*\n\nYou now have access to all features. Send any message to get started.`,
+              { parse_mode: 'Markdown' }
+            ).catch(() => {});
+          } else if (result?.type === 'topup') {
+            await bot.api.sendMessage(result.userId,
+              `⚡ *${formatWords(result.words)} words added to your balance!*\n\nUse /usage to see your updated balance.`,
+              { parse_mode: 'Markdown' }
+            ).catch(() => {});
+          } else if (result?.type === 'cancelled') {
+            await bot.api.sendMessage(result.userId,
+              `⚠️ *Subscription cancelled.*\n\nYour access continues until the billing period ends. Data is preserved for 7 days, then deleted.`,
+              { parse_mode: 'Markdown' }
+            ).catch(() => {});
+          }
+          res.writeHead(200, { 'Content-Type': 'text/plain' });
+          res.end('ok');
+        } catch (err) {
+          console.error('Webhook error:', err.message);
+          res.writeHead(400, { 'Content-Type': 'text/plain' });
+          res.end(err.message);
+        }
+      });
+    } else {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('OpenGriffin OK');
+    }
+  });
+
+  const PORT = process.env.PORT || 3000;
+  webhookServer.listen(PORT, () => {
+    console.log(`   🌐 Webhook server: http://localhost:${PORT}/webhook`);
+  });
+}
 
 // ── Scheduler ─────────────────────────────
 const sendTg = async (userId, text) => {

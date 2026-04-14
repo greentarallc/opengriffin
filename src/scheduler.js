@@ -97,9 +97,6 @@ export class Scheduler {
 
     for (const user_id of users) {
       try {
-        const adminIds = (process.env.ADMIN_TELEGRAM_IDS || '').split(',');
-        if (!adminIds.includes(user_id)) continue;
-
         await this._sendScheduledMessage(user_id, taskType);
       } catch (err) {
         console.error(`Scheduler error for user ${user_id}:`, err.message);
