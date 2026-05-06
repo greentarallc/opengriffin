@@ -250,7 +250,3 @@ OpenGriffin is released under the [Apache License 2.0](LICENSE). You are free to
 ---
 
 <sub>OpenGriffin is not affiliated with Anthropic, OpenAI, Google, Microsoft, AWS, Mistral, Cohere, Groq, or any other provider listed above. "Claude" is a trademark of Anthropic, PBC.</sub>
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for the future hosted-product spec captured from the original opengriffin.com SaaS landing — preserved as the eventual paid-tier vision when OSS demand justifies the build.
