@@ -40,22 +40,22 @@ from telegram.ext import (
     filters,
 )
 
-import aliases as aliases_module
-import approvals as approvals_module
-import botctx
-import checkpoints as checkpoints_module
-import cron as cron_module
-import kanban as kanban_module
-import memory as memory_module
-import progress as progress_module
-import recall as recall_module
-import self_improve as self_improve_module
-import tools as tools_module
-import topics as topics_module
-import usage as usage_module
-import voice as voice_module
-import webhooks as webhooks_module
-from redact import redact
+from . import aliases as aliases_module
+from . import approvals as approvals_module
+from . import botctx
+from . import checkpoints as checkpoints_module
+from . import cron as cron_module
+from . import kanban as kanban_module
+from . import memory as memory_module
+from . import progress as progress_module
+from . import recall as recall_module
+from . import self_improve as self_improve_module
+from . import tools as tools_module
+from . import topics as topics_module
+from . import usage as usage_module
+from . import voice as voice_module
+from . import webhooks as webhooks_module
+from .redact import redact
 
 
 # Look for .env in: CWD, ~/.config/opengriffin/, or wherever OPENGRIFFIN_HOME points.
@@ -68,7 +68,9 @@ for _p in (
         load_dotenv(_p)
         break
 
-BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+# Read at startup; main() validates. Lazy so `import opengriffin.bot` works
+# in tests, doctor, and other tooling without forcing a Telegram token.
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
 _raw_allowed = os.environ.get("TELEGRAM_ALLOWED_USERS", "").strip()
 ALLOWED_USERS: set[int] = {

@@ -173,7 +173,7 @@ def ask(rental_id: str, prompt: str) -> dict:
     try:
         from . import a2a as a2a_module  # type: ignore
     except Exception:
-        import a2a as a2a_module
+        from . import a2a as a2a_module
     result = a2a_module.call_remote(
         base_url, prompt=prompt,
         max_amount_usd=float(rental["max_usd"]) - float(rental["spent_usd"]),

@@ -33,7 +33,7 @@ from typing import Any
 
 from aiohttp import web
 
-from botctx import CTX
+from .botctx import CTX
 
 log = logging.getLogger("opengriffin.webhooks")
 
@@ -121,7 +121,7 @@ async def _handle(request: web.Request) -> web.Response:
     elif mode == "agent":
         # Schedule an agent run; respond fast so the sender doesn't time out.
         import asyncio
-        import cron as cron_module
+        from . import cron as cron_module
 
         async def _run():
             job = cron_module.Job(

@@ -112,7 +112,7 @@ async def _handle_handshake(request: web.Request) -> web.Response:
     try:
         from . import reputation as rep_mod  # type: ignore
     except Exception:
-        import reputation as rep_mod
+        from . import reputation as rep_mod
     handle = request.query.get("handle", "anonymous")
     profile = rep_mod.build_profile(handle)
     return web.json_response(profile)
@@ -143,7 +143,7 @@ async def _handle_delegate(request: web.Request) -> web.Response:
 
 
 async def _run_delegation(task_id: str, prompt: str) -> None:
-    import bot as bot_module
+    from . import bot as bot_module
     data = _load()
     data["tasks"][task_id]["status"] = "running"
     _save(data)

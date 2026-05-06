@@ -127,7 +127,7 @@ def _normalize_topic(text: str) -> str:
 async def precompute_due() -> dict:
     """Run every 5 minutes. For any pattern that fires within the next 15
     minutes, pre-compute the answer and cache it."""
-    import bot as bot_module
+    from . import bot as bot_module
     now = dt.datetime.now()
     upcoming = []
     for p in _load_patterns().get("patterns", []):

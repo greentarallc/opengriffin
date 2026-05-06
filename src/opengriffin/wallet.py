@@ -70,7 +70,7 @@ def can_spend(amount_usd: float, *, skill: Optional[str] = None) -> tuple[bool, 
 async def approve_via_telegram(amount_usd: float, vendor: str, item: str) -> bool:
     """Ask the user via Telegram inline buttons to approve a payment."""
     # Reuse the approvals.py infra
-    import approvals
+    from . import approvals
     from botctx import CTX
     if CTX.bot is None or not CTX.home_chat_id:
         return False

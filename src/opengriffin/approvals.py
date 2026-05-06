@@ -25,7 +25,7 @@ from claude_agent_sdk import (
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackQueryHandler, ContextTypes
 
-from botctx import CTX
+from .botctx import CTX
 
 log = logging.getLogger("opengriffin.approvals")
 

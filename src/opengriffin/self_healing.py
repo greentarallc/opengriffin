@@ -84,7 +84,7 @@ instructions there.
 
 async def heal_skill(skill_name: str) -> dict:
     """Run the heal pipeline for one skill. Writes a proposal and returns its path."""
-    import bot as bot_module
+    from . import bot as bot_module
     p = SKILLS_DIR / skill_name / "SKILL.md"
     if not p.is_file():
         return {"ok": False, "error": f"no such skill: {skill_name}"}

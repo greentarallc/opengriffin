@@ -84,7 +84,7 @@ def list_active() -> list[dict]:
 
 async def fire(lock_id: str) -> str:
     """Called by APScheduler at the lock's time. Runs unless vetoed."""
-    import bot as bot_module
+    from . import bot as bot_module
     from botctx import CTX
     data = _load()
     entry = next((e for e in data["locks"] if e["id"] == lock_id), None)

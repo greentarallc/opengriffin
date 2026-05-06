@@ -134,7 +134,7 @@ def _rewrite_queue(worker_id: str, items: list[dict]) -> None:
 async def _run_loop(worker_id: str) -> None:
     """The actual worker loop. Polls queue, runs tasks, writes results,
     checks in periodically."""
-    import bot as bot_module  # noqa
+    from . import bot as bot_module  # noqa
     from botctx import CTX
 
     last_checkin = dt.datetime.now()

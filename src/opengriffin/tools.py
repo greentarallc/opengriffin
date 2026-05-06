@@ -20,8 +20,8 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
-import cron as cron_module
-from botctx import CTX
+from . import cron as cron_module
+from .botctx import CTX
 
 JOBS_FILE = cron_module.JOBS_FILE
 SKILLS_DIR = Path.home() / ".claude" / "skills"
@@ -413,7 +413,7 @@ async def _image_generate(args: dict) -> dict:
     {"entry": Annotated[str, "Markdown entry, including its own '## date' header"]},
 )
 async def _journal_append(args: dict) -> dict:
-    import self_improve
+    from . import self_improve
     try:
         self_improve.append_journal_entry(args["entry"])
     except Exception as e:

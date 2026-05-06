@@ -64,7 +64,7 @@ PERSONAS = [
 
 async def vote(action: str, *, context: str = "", n: int = 2, m: int = 3) -> dict:
     """Run the quorum. Returns {decision, votes: [...], approvals, denials}."""
-    import bot as bot_module
+    from . import bot as bot_module
     if m < 1 or n < 1 or n > m:
         raise ValueError("invalid n/m")
 

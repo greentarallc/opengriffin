@@ -36,6 +36,8 @@ _INJECTION_PATTERNS = [
     re.compile(r"\[\[INST\]\]|\[/INST\]\]", re.IGNORECASE),
     re.compile(r"forget (everything|all (instructions|prompts))", re.IGNORECASE),
     re.compile(r"reveal (your |the )?(system )?prompt", re.IGNORECASE),
+    re.compile(r"\bDAN (mode|prompt)\b", re.IGNORECASE),
+    re.compile(r"\bjailbreak\b", re.IGNORECASE),
 ]
 
 

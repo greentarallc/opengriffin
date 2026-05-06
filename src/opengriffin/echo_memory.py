@@ -154,7 +154,7 @@ async def consolidate_nightly() -> dict:
     Uses the bot's own ask_claude to summarize, so it inherits the user's
     preferences (terseness from SOUL.md, etc.).
     """
-    import bot as bot_module  # noqa
+    from . import bot as bot_module  # noqa
     today = dt.date.today()
     moved = {"vivid_to_recent": 0, "recent_to_fading": 0, "fading_to_ancient": 0}
 

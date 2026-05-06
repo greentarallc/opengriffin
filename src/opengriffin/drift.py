@@ -45,7 +45,7 @@ Recent JOURNAL:
 
 async def detect_drift() -> list[dict]:
     """Run a one-shot Claude analysis of USER.md + recent journal."""
-    import bot as bot_module  # noqa
+    from . import bot as bot_module  # noqa
     user_md_path = Path.home() / ".opengriffin" / "memories" / "USER.md"
     journal_path = Path.home() / ".opengriffin" / "memories" / "JOURNAL.md"
     if not user_md_path.is_file() or not journal_path.is_file():

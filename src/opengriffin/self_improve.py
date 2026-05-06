@@ -162,7 +162,7 @@ def yesterday_stats() -> dict:
 
 async def run_daily(bot, deliver_to: Optional[str] = None) -> str:
     """Execute the daily self-improvement turn. Returns a short status string."""
-    import bot as bot_module  # local import to avoid circular
+    from . import bot as bot_module  # local import to avoid circular
 
     today = dt.date.today().isoformat()
     yesterday = (dt.date.today() - dt.timedelta(days=1)).isoformat()

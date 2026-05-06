@@ -31,7 +31,7 @@ from claude_agent_sdk import (
 from telegram import Bot
 from telegram.constants import ParseMode
 
-import memory as memory_module
+from . import memory as memory_module
 
 log = logging.getLogger("opengriffin.cron")
 
@@ -99,8 +99,8 @@ def _run_pre_script(rel_path: str) -> str:
 
 async def _run_claude(prompt: str, job_id: str | None = None) -> str:
     # Local imports avoid circular import with bot.py
-    import bot as bot_module
-    import usage as usage_module
+    from . import bot as bot_module
+    from . import usage as usage_module
 
     append_prompt = (
         "You are running as a scheduled cron job. Deliver the result "

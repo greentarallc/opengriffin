@@ -53,7 +53,7 @@ async def run_pod_turn(pod_name: str, user_message: str, chat_id: int) -> str:
       - a convergence keyword appears in the latest agent's response, OR
       - MAX_TURNS hit.
     """
-    import bot as bot_module  # noqa
+    from . import bot as bot_module  # noqa
     pods = _load().get("pods", {})
     pod = pods.get(pod_name)
     if pod is None:

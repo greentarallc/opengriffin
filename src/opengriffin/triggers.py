@@ -68,7 +68,7 @@ async def evaluate(trigger: dict, event_payload: Optional[dict] = None) -> Optio
 
     Predicate is evaluated by Claude with a strict yes/no contract.
     """
-    import bot as bot_module  # noqa
+    from . import bot as bot_module  # noqa
 
     predicate = trigger.get("predicate", "").strip()
     if not predicate:

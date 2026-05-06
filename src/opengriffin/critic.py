@@ -59,7 +59,7 @@ Brief context (1-3 lines, may be omitted):
 
 async def review(action_payload: str, *, context: str = "") -> dict:
     """Run the critic on a proposed action. Returns the decision."""
-    import bot as bot_module
+    from . import bot as bot_module
     prompt = CRITIC_PROMPT.format(
         action_payload=action_payload[:4000],
         context=context[:500] if context else "(none)",

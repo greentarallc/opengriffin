@@ -111,7 +111,7 @@ Existing MEMORY.md (do not duplicate):
 
 async def run_dream_cycle() -> dict:
     """The nightly job. Returns a summary."""
-    import bot as bot_module
+    from . import bot as bot_module
     sids = _interesting_sessions(limit=5)
     if not sids:
         return {"sessions": 0, "dreams": 0, "lessons": 0}
@@ -159,7 +159,7 @@ async def run_dream_cycle() -> dict:
             try:
                 from . import memory as mem_module  # type: ignore
             except Exception:
-                import memory as mem_module
+                from . import memory as mem_module
             for line in reply.splitlines():
                 line = line.strip(" -•").strip()
                 if len(line) > 10 and not line.startswith("#"):
