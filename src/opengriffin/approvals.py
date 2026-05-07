@@ -27,7 +27,7 @@ from telegram.ext import CallbackQueryHandler, ContextTypes
 
 from .botctx import CTX
 
-log = logging.getLogger("opengriffin.approvals")
+log = logging.getLogger("claude-bot.approvals")
 
 APPROVAL_TIMEOUT_SEC = 60
 
@@ -162,38 +162,83 @@ async def can_use_tool(
     return PermissionResultDeny(message=decision)
 
 
+async def _safe_answer(q, text: str = "") -> None:
+    """Acknowledge a callback query, swallowing 'too old' / 'invalid' errors.
+
+    Telegram callback queries expire (~15 min) and old buttons from before a
+    bot restart will always fail. We don't want that to blow up the handler.
+    """
+    try:
+        await q.answer(text)
+    except Exception as e:
+        log.debug("q.answer failed (likely stale query): %s", e)
+
+
+async def _safe_edit(q, suffix: str) -> None:
+    """Append a status suffix to the prompt message; swallow markdown/edit errors."""
+    try:
+        original = q.message.text or ""
+        await q.edit_message_text(
+            original + suffix,
+            parse_mode="Markdown",
+        )
+    except Exception:
+        # Markdown can fail on weird content; fall back to plain text
+        try:
+            await q.edit_message_text((q.message.text or "") + suffix)
+        except Exception as e:
+            log.debug("edit_message_text failed: %s", e)
+
+
 async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    """Resolve a pending approval future from a button press."""
+    """Resolve a pending approval future from a button press.
+
+    Defensive throughout: every Telegram API call is wrapped so a stale
+    query / markdown failure / edit-too-old error can't prevent the future
+    from being resolved.
+    """
     q = update.callback_query
     if q is None or q.data is None or not q.data.startswith("appr:"):
         return
     parts = q.data.split(":")
+    if len(parts) < 3:
+        await _safe_answer(q, "(malformed)")
+        return
     action = parts[1]
     req_id = parts[2]
     fut = STATE.pending.get(req_id)
+
+    # Stale: future already resolved, or bot restarted clearing pending.
     if fut is None or fut.done():
-        await q.answer("(already resolved or expired)")
+        await _safe_answer(q, "(already resolved or expired)")
+        await _safe_edit(q, "\n\n_(this approval is no longer waiting — likely already resolved or the bot restarted)_")
         return
+
+    # Resolve the future FIRST. UI feedback is best-effort.
     if action == "once":
         fut.set_result("allow")
-        await q.answer("allowed once")
-        await q.edit_message_text(q.message.text + "\n\n✅ allowed once")
-    elif action == "session":
+        await _safe_answer(q, "allowed once")
+        await _safe_edit(q, "\n\n✅ allowed once")
+    elif action == "session" and len(parts) >= 4:
         tool_name = parts[3]
         STATE.session_allow_tools.add(tool_name)
         fut.set_result("allow")
-        await q.answer(f"session-allowed {tool_name}")
-        await q.edit_message_text(q.message.text + f"\n\n🟢 session-allowed `{tool_name}`")
-    elif action == "always":
+        await _safe_answer(q, f"session-allowed {tool_name}")
+        await _safe_edit(q, f"\n\n🟢 session-allowed `{tool_name}`")
+    elif action == "always" and len(parts) >= 4:
         tool_name = parts[3]
         STATE.always_allow_tools.add(tool_name)
         fut.set_result("allow")
-        await q.answer(f"always-allowed {tool_name}")
-        await q.edit_message_text(q.message.text + f"\n\n🔵 always-allowed `{tool_name}`")
-    else:
+        await _safe_answer(q, f"always-allowed {tool_name}")
+        await _safe_edit(q, f"\n\n🔵 always-allowed `{tool_name}`")
+    elif action == "deny":
         fut.set_result("denied by user")
-        await q.answer("denied")
-        await q.edit_message_text(q.message.text + "\n\n❌ denied")
+        await _safe_answer(q, "denied")
+        await _safe_edit(q, "\n\n❌ denied")
+    else:
+        # Unknown action; default-deny but don't error
+        fut.set_result(f"unknown action: {action}")
+        await _safe_answer(q, "unknown action")
 
 
 HANDLER = CallbackQueryHandler(callback_handler, pattern=r"^appr:")
