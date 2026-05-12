@@ -1,0 +1,158 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* OpenGriffin palette — dark OLED base + violet brand + green "alive" accent */
+  --color-bg-canvas: #0a0a0a;
+  --color-bg-elev: #111118;
+  --color-surface: rgba(255, 255, 255, 0.03);
+  --color-surface-hover: rgba(255, 255, 255, 0.05);
+  --color-border-soft: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(124, 58, 237, 0.4);
+
+  --color-text: #f8fafc;
+  --color-text-dim: #a1a1aa;
+  --color-text-faint: #71717a;
+
+  --color-brand: #7c3aed;        /* violet — continuity with current site */
+  --color-brand-soft: #a78bfa;
+  --color-brand-glow: rgba(124, 58, 237, 0.5);
+
+  --color-alive: #22c55e;        /* green — "running / online" indicators */
+  --color-alive-soft: #4ade80;
+  --color-alive-glow: rgba(34, 197, 94, 0.5);
+
+  --color-warn: #f59e0b;
+  --color-danger: #ef4444;
+
+  /* shadcn-style tokens — tuned to OpenGriffin's dark palette so the
+     shadcn primitives (Button / Card / Badge) just work without re-skinning. */
+  --radius: 0.75rem;
+  --background: #0a0a0a;
+  --foreground: #f8fafc;
+  --card: #111118;
+  --card-foreground: #f8fafc;
+  --popover: #111118;
+  --popover-foreground: #f8fafc;
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --secondary: #1f2937;
+  --secondary-foreground: #f8fafc;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --accent: #1f1f2a;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #7c3aed;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* OpenGriffin-specific tokens (separate from shadcn's set) */
+  --color-bg-canvas: var(--color-bg-canvas);
+  --color-bg-elev: var(--color-bg-elev);
+  --color-surface: var(--color-surface);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-border-soft: var(--color-border-soft);
+  --color-border-hover: var(--color-border-hover);
+  --color-text: var(--color-text);
+  --color-text-dim: var(--color-text-dim);
+  --color-text-faint: var(--color-text-faint);
+  --color-brand: var(--color-brand);
+  --color-brand-soft: var(--color-brand-soft);
+  --color-brand-glow: var(--color-brand-glow);
+  --color-alive: var(--color-alive);
+  --color-alive-soft: var(--color-alive-soft);
+  --color-alive-glow: var(--color-alive-glow);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
+
+/* Grain texture for hero sections — subtle depth without performance hit */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+}
+
+/* OpenGriffin card primitive — used across sections */
+.og-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+.og-card:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--color-brand);
+  color: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
