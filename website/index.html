@@ -76,13 +76,12 @@
     <h2 class="text-3xl sm:text-5xl font-bold tracking-tight">Existing agent tools forget. <span class="text-violet-400">OpenGriffin compounds.</span></h2>
     <div class="grid sm:grid-cols-2 gap-12 mt-12 text-zinc-300">
       <div>
-        <h3 class="font-semibold text-zinc-100 text-lg mb-2">The Hermes / OpenClaw / Magai problem</h3>
+        <h3 class="font-semibold text-zinc-100 text-lg mb-2">Where existing tools stop</h3>
         <ul class="space-y-2 text-zinc-400">
-          <li>— Conversations vanish at session end</li>
-          <li>— Skills you teach must be re-taught</li>
-          <li>— Hosted SaaS locks you to one vendor's tokens</li>
-          <li>— Multi-model dashboards still don't <em>do</em> things autonomously</li>
-          <li>— Backend dependency = privacy leak + outage risk</li>
+          <li>— Hermes and OpenClaw remember, but don't <em>self-evolve</em> — no journal, no skill graph, no drift detection</li>
+          <li>— Multi-model chat dashboards are great UIs, not agents — they don't run cron, spawn sub-agents, or act between your messages</li>
+          <li>— Hosted assistants put your prompts and outputs on someone else's servers and ride someone else's uptime</li>
+          <li>— None of them ship a critic, capability tokens, Merkle audit, or a dead-man's switch</li>
         </ul>
       </div>
       <div>
@@ -249,8 +248,8 @@ griffin migrate from-openclaw</code></pre>
         <p class="mt-3 text-zinc-400 text-sm">OpenClaw is a thin CLI wrapper. OpenGriffin is a long-running agent with persistent memory, scheduled work, sub-agent spawning, multi-platform delivery, and a self-improvement loop. We ship a one-line migration tool to import OpenClaw state.</p>
       </details>
       <details class="card rounded-xl p-5">
-        <summary class="font-semibold cursor-pointer">What's the difference vs Magai-class SaaS?</summary>
-        <p class="mt-3 text-zinc-400 text-sm">Magai is a hosted multi-model dashboard. OpenGriffin is autonomy + memory + skills you run on your own machine. Magai costs $19+/month and your data lives on their servers; OpenGriffin is free and your data never leaves your disk unless you explicitly send it somewhere.</p>
+        <summary class="font-semibold cursor-pointer">What's the difference vs a hosted multi-model dashboard?</summary>
+        <p class="mt-3 text-zinc-400 text-sm">Hosted dashboards are chat UIs across many models — useful, but not agents. OpenGriffin is autonomy + memory + skills you run on your own machine: no monthly subscription, your data stays on your disk unless you explicitly send it somewhere, and the agent acts between your messages.</p>
       </details>
       <details class="card rounded-xl p-5">
         <summary class="font-semibold cursor-pointer">Do I have to use Telegram?</summary>

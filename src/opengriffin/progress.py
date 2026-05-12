@@ -11,20 +11,19 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Optional
 
 log = logging.getLogger("opengriffin.progress")
 
 # Hard timeout per chat request. The SDK has no built-in cap; without this a
 # hung subprocess wedges the chat indefinitely.
 REQUEST_TIMEOUT_SEC = 600  # 10 min for chat
-TYPING_INTERVAL_SEC = 5    # Telegram typing indicator expires ~5s
+TYPING_INTERVAL_SEC = 5  # Telegram typing indicator expires ~5s
 STATUS_EDIT_INTERVAL_SEC = 12
 
 
 @dataclass
 class ToolEvent:
-    name: str          # e.g. "Bash", "Read", "mcp__memory__memory_add"
+    name: str  # e.g. "Bash", "Read", "mcp__memory__memory_add"
     summary: str = ""  # human-readable "what" — file path, command, url, etc.
 
 
@@ -33,7 +32,7 @@ class RunState:
     chat_id: int
     started_at: float
     cancel_event: asyncio.Event = field(default_factory=asyncio.Event)
-    status_msg_id: Optional[int] = None
+    status_msg_id: int | None = None
     tool_calls: list[ToolEvent] = field(default_factory=list)
     text_chars: int = 0
     finished: bool = False
@@ -42,7 +41,7 @@ class RunState:
         return int(time.monotonic() - self.started_at)
 
     @property
-    def current_tool(self) -> Optional[ToolEvent]:
+    def current_tool(self) -> ToolEvent | None:
         return self.tool_calls[-1] if self.tool_calls else None
 
     def status_text(self) -> str:
@@ -75,18 +74,18 @@ class RunState:
 
 
 _TOOL_ICONS = {
-    "Bash":          "🖥️ Bash",
-    "Read":          "📖 Read",
-    "Write":         "✏️ Write",
-    "Edit":          "✏️ Edit",
-    "MultiEdit":     "✏️ MultiEdit",
-    "NotebookEdit":  "📓 NotebookEdit",
-    "Glob":          "🔍 Glob",
-    "Grep":          "🔍 Grep",
-    "WebFetch":      "🌐 WebFetch",
-    "WebSearch":     "🌐 WebSearch",
-    "Task":          "🤖 Subagent",
-    "TodoWrite":     "📝 Todo",
+    "Bash": "🖥️ Bash",
+    "Read": "📖 Read",
+    "Write": "✏️ Write",
+    "Edit": "✏️ Edit",
+    "MultiEdit": "✏️ MultiEdit",
+    "NotebookEdit": "📓 NotebookEdit",
+    "Glob": "🔍 Glob",
+    "Grep": "🔍 Grep",
+    "WebFetch": "🌐 WebFetch",
+    "WebSearch": "🌐 WebSearch",
+    "Task": "🤖 Subagent",
+    "TodoWrite": "📝 Todo",
 }
 
 
@@ -95,7 +94,7 @@ def _pretty_tool_label(raw: str) -> str:
         return _TOOL_ICONS[raw]
     if raw.startswith("mcp__"):
         # mcp__server__tool → "🔌 server·tool"
-        rest = raw[len("mcp__"):]
+        rest = raw[len("mcp__") :]
         return f"🔌 {rest.replace('__', '·')}"
     return f"🔧 {raw}"
 
@@ -108,7 +107,7 @@ def _truncate(text: str, n: int) -> str:
 _running: dict[int, RunState] = {}
 
 
-def get(chat_id: int) -> Optional[RunState]:
+def get(chat_id: int) -> RunState | None:
     return _running.get(chat_id)
 
 
@@ -117,7 +116,7 @@ def is_running(chat_id: int) -> bool:
     return s is not None and not s.finished
 
 
-def start(chat_id: int, status_msg_id: Optional[int]) -> RunState:
+def start(chat_id: int, status_msg_id: int | None) -> RunState:
     state = RunState(
         chat_id=chat_id,
         started_at=time.monotonic(),

@@ -54,7 +54,12 @@ def append(action_kind: str, payload: dict | str) -> dict:
     body = json.dumps(payload, sort_keys=True) if isinstance(payload, dict) else payload
     prev_root = _current_root()
     leaf_input = json.dumps(
-        {"action_kind": action_kind, "payload": body, "ts": dt.datetime.now().isoformat(timespec="seconds"), "prev_root": prev_root},
+        {
+            "action_kind": action_kind,
+            "payload": body,
+            "ts": dt.datetime.now().isoformat(timespec="seconds"),
+            "prev_root": prev_root,
+        },
         sort_keys=True,
     )
     leaf = _leaf_hash(leaf_input)
@@ -145,10 +150,12 @@ def inclusion_proof(index: int) -> dict:
         sibling_idx = idx + 1 if idx % 2 == 0 else idx - 1
         if sibling_idx >= len(layer):
             sibling_idx = idx  # duplicated odd
-        path.append({
-            "sibling": layer[sibling_idx],
-            "side": "right" if idx % 2 == 0 else "left",
-        })
+        path.append(
+            {
+                "sibling": layer[sibling_idx],
+                "side": "right" if idx % 2 == 0 else "left",
+            }
+        )
         idx = idx // 2
         layer = nxt
     return {
@@ -196,7 +203,14 @@ async def _append(args: dict) -> dict:
 )
 async def _commit(args: dict) -> dict:
     rec = commit_root()
-    return {"content": [{"type": "text", "text": f"COMMIT root: {rec['root']}\nleaves: {rec['leaf_count']}\nat: {rec['ts']}\n\nPublish this root publicly to enable later proof verification."}]}
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": f"COMMIT root: {rec['root']}\nleaves: {rec['leaf_count']}\nat: {rec['ts']}\n\nPublish this root publicly to enable later proof verification.",
+            }
+        ]
+    }
 
 
 @tool(

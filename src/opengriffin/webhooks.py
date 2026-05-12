@@ -121,6 +121,7 @@ async def _handle(request: web.Request) -> web.Response:
     elif mode == "agent":
         # Schedule an agent run; respond fast so the sender doesn't time out.
         import asyncio
+
         from . import cron as cron_module
 
         async def _run():

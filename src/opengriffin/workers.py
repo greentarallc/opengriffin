@@ -21,13 +21,13 @@ This closes the "team of developers" gap with Hermes. A user can:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime as dt
 import json
 import logging
 import uuid
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -72,8 +72,14 @@ def list_workers() -> list[dict]:
     return list(_load_registry().get("workers", {}).values())
 
 
-def create(name: str, role: str, *, soul: Optional[str] = None, parent_id: Optional[str] = None,
-           checkin_interval_min: int = 60) -> dict:
+def create(
+    name: str,
+    role: str,
+    *,
+    soul: str | None = None,
+    parent_id: str | None = None,
+    checkin_interval_min: int = 60,
+) -> dict:
     """Register a worker. Doesn't start it — call `start()`."""
     wid = uuid.uuid4().hex[:8]
     entry = {
@@ -180,15 +186,20 @@ async def _run_loop(worker_id: str) -> None:
             finished = dt.datetime.now()
 
             with _results_path(worker_id).open("a") as fh:
-                fh.write(json.dumps({
-                    "task_id": task["task_id"],
-                    "task_text": task["text"],
-                    "result": result_text[:8000],
-                    "started_at": started.isoformat(timespec="seconds"),
-                    "finished_at": finished.isoformat(timespec="seconds"),
-                    "duration_sec": round((finished - started).total_seconds(), 1),
-                    "ok": ok,
-                }) + "\n")
+                fh.write(
+                    json.dumps(
+                        {
+                            "task_id": task["task_id"],
+                            "task_text": task["text"],
+                            "result": result_text[:8000],
+                            "started_at": started.isoformat(timespec="seconds"),
+                            "finished_at": finished.isoformat(timespec="seconds"),
+                            "duration_sec": round((finished - started).total_seconds(), 1),
+                            "ok": ok,
+                        }
+                    )
+                    + "\n"
+                )
 
             data = _load_registry()
             worker = data["workers"].get(worker_id) or worker
@@ -200,18 +211,18 @@ async def _run_loop(worker_id: str) -> None:
             _save_registry(data)
 
             # Check-in if enough time has passed
-            if (dt.datetime.now() - last_checkin).total_seconds() >= worker.get("checkin_interval_min", 60) * 60:
+            if (dt.datetime.now() - last_checkin).total_seconds() >= worker.get(
+                "checkin_interval_min", 60
+            ) * 60:
                 if CTX.bot and CTX.home_chat_id:
                     summary = (
                         f"📋 Worker @{worker['name']} ({worker['role']}): "
                         f"completed task {task['task_id']} ({'ok' if ok else 'failed'}) "
-                        f"in {round((finished-started).total_seconds())}s. "
+                        f"in {round((finished - started).total_seconds())}s. "
                         f"Queue: {len(remaining)} pending."
                     )
-                    try:
+                    with contextlib.suppress(Exception):
                         await CTX.bot.send_message(chat_id=CTX.home_chat_id, text=summary)
-                    except Exception:
-                        pass
                 last_checkin = dt.datetime.now()
         else:
             data = _load_registry()
@@ -261,7 +272,7 @@ def status_all() -> str:
         q = len(_read_queue(w["id"]))
         lines.append(
             f"{w['id']} @{w['name']} ({w['role']}) — {w['status']} — "
-            f"queue={q} done={w.get('tasks_completed',0)} failed={w.get('tasks_failed',0)} "
+            f"queue={q} done={w.get('tasks_completed', 0)} failed={w.get('tasks_failed', 0)} "
             f"hb={w.get('last_heartbeat') or '—'}"
         )
     return "\n".join(lines)
@@ -276,18 +287,28 @@ def status_all() -> str:
     {
         "name": Annotated[str, "Worker name (e.g. 'atlas')"],
         "role": Annotated[str, "Role description ('research', 'engineering', 'ops')"],
-        "soul_path": Annotated[Optional[str], "Optional path to a SOUL.md persona file"],
-        "checkin_interval_min": Annotated[Optional[int], "Minutes between Telegram check-ins (default 60)"],
+        "soul_path": Annotated[str | None, "Optional path to a SOUL.md persona file"],
+        "checkin_interval_min": Annotated[
+            int | None, "Minutes between Telegram check-ins (default 60)"
+        ],
     },
 )
 async def _spawn(args: dict) -> dict:
     entry = create(
-        name=args["name"], role=args["role"],
+        name=args["name"],
+        role=args["role"],
         soul=args.get("soul_path"),
         checkin_interval_min=int(args.get("checkin_interval_min") or 60),
     )
     await start(entry["id"])
-    return {"content": [{"type": "text", "text": f"spawned worker {entry['id']} @{entry['name']} ({entry['role']})"}]}
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": f"spawned worker {entry['id']} @{entry['name']} ({entry['role']})",
+            }
+        ]
+    }
 
 
 @tool(
@@ -296,7 +317,7 @@ async def _spawn(args: dict) -> dict:
     {
         "worker_id": Annotated[str, "Worker id (or name with @ prefix)"],
         "task": Annotated[str, "Full task description"],
-        "priority": Annotated[Optional[int], "1-10, higher = sooner (default 5)"],
+        "priority": Annotated[int | None, "1-10, higher = sooner (default 5)"],
     },
 )
 async def _assign(args: dict) -> dict:
@@ -308,7 +329,10 @@ async def _assign(args: dict) -> dict:
                 wid = w["id"]
                 break
         else:
-            return {"content": [{"type": "text", "text": f"no worker: {args['worker_id']}"}], "is_error": True}
+            return {
+                "content": [{"type": "text", "text": f"no worker: {args['worker_id']}"}],
+                "is_error": True,
+            }
     tid = enqueue(wid, args["task"], priority=int(args.get("priority") or 5))
     return {"content": [{"type": "text", "text": f"queued task {tid} on worker {wid}"}]}
 
@@ -329,7 +353,10 @@ async def _status(args: dict) -> dict:
 )
 async def _kill(args: dict) -> dict:
     ok = kill(args["worker_id"])
-    return {"content": [{"type": "text", "text": "killed" if ok else "not found"}], "is_error": not ok}
+    return {
+        "content": [{"type": "text", "text": "killed" if ok else "not found"}],
+        "is_error": not ok,
+    }
 
 
 @tool(
@@ -337,7 +364,7 @@ async def _kill(args: dict) -> dict:
     "Read the last N results from a worker's results log.",
     {
         "worker_id": Annotated[str, "Worker id"],
-        "n": Annotated[Optional[int], "How many results (default 5)"],
+        "n": Annotated[int | None, "How many results (default 5)"],
     },
 )
 async def _results(args: dict) -> dict:
@@ -351,7 +378,9 @@ async def _results(args: dict) -> dict:
     for line in lines:
         try:
             r = json.loads(line)
-            out.append(f"[{r.get('finished_at')}] {r.get('task_text', '')[:80]} → {('ok' if r.get('ok') else 'fail')}: {r.get('result', '')[:300]}")
+            out.append(
+                f"[{r.get('finished_at')}] {r.get('task_text', '')[:80]} → {('ok' if r.get('ok') else 'fail')}: {r.get('result', '')[:300]}"
+            )
         except Exception:
             continue
     return {"content": [{"type": "text", "text": "\n\n".join(out)}]}

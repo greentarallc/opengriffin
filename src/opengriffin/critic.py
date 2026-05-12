@@ -19,7 +19,7 @@ import datetime as dt
 import json
 import logging
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -60,6 +60,7 @@ Brief context (1-3 lines, may be omitted):
 async def review(action_payload: str, *, context: str = "") -> dict:
     """Run the critic on a proposed action. Returns the decision."""
     from . import bot as bot_module
+
     prompt = CRITIC_PROMPT.format(
         action_payload=action_payload[:4000],
         context=context[:500] if context else "(none)",
@@ -92,7 +93,9 @@ async def review(action_payload: str, *, context: str = "") -> dict:
     "critic_review",
     "Submit a proposed action to the adversarial critic for independent review. The critic does NOT see the original user request — only the action itself. Use BEFORE running anything destructive or expensive.",
     {
-        "action_payload": Annotated[str, "Full description of the proposed action (command, URL+body, file write, etc.)"],
+        "action_payload": Annotated[
+            str, "Full description of the proposed action (command, URL+body, file write, etc.)"
+        ],
         "context": Annotated[str, "Brief 1-3 line context — but NOT the user's original prompt"],
     },
 )
@@ -109,12 +112,14 @@ async def _review(args: dict) -> dict:
 async def _audit(args: dict) -> dict:
     if not CRITIC_LOG.is_file():
         return {"content": [{"type": "text", "text": "no audit log"}]}
-    lines = CRITIC_LOG.read_text().splitlines()[-int(args.get("n") or 20):]
+    lines = CRITIC_LOG.read_text().splitlines()[-int(args.get("n") or 20) :]
     out = []
     for line in lines:
         try:
             r = json.loads(line)
-            out.append(f"[{r.get('reviewed_at')}] verdict={r.get('verdict')} risk={r.get('risk_score')} | {r.get('action_preview','')[:120]}")
+            out.append(
+                f"[{r.get('reviewed_at')}] verdict={r.get('verdict')} risk={r.get('risk_score')} | {r.get('action_preview', '')[:120]}"
+            )
         except Exception:
             continue
     return {"content": [{"type": "text", "text": "\n".join(out)}]}

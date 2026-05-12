@@ -1,6 +1,6 @@
 """Verify redact.redact masks common secret shapes."""
 
-from opengriffin.redact import redact, looks_like_injection
+from opengriffin.redact import looks_like_injection, redact
 
 
 def test_redacts_anthropic_key():

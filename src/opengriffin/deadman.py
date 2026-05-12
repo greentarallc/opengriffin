@@ -17,12 +17,13 @@ Storage: deadman.json — {last_user_msg_at, locked, recovery_code, ...}
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import json
 import logging
 import secrets
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -93,10 +94,13 @@ def status() -> dict:
     }
 
 
-def configure(*, lock_after_days: Optional[int] = None,
-              escalate_after_days: Optional[int] = None,
-              trusted_contact_chat_id: Optional[str] = None,
-              trusted_contact_text: Optional[str] = None) -> dict:
+def configure(
+    *,
+    lock_after_days: int | None = None,
+    escalate_after_days: int | None = None,
+    trusted_contact_chat_id: str | None = None,
+    trusted_contact_text: str | None = None,
+) -> dict:
     data = _load()
     if lock_after_days is not None:
         data["lock_after_days"] = int(lock_after_days)
@@ -114,6 +118,7 @@ async def daily_tick() -> dict:
     """Run daily. If past lock threshold and not yet locked: lock + send recovery code.
     If past escalate threshold and not yet escalated: send to trusted contact."""
     from botctx import CTX
+
     data = _load()
     last = data.get("last_user_msg_at")
     if not last:
@@ -128,18 +133,16 @@ async def daily_tick() -> dict:
         data["recovery_code"] = code
         actions.append("locked")
         if CTX.bot and CTX.home_chat_id:
-            try:
+            with contextlib.suppress(Exception):
                 await CTX.bot.send_message(
                     chat_id=CTX.home_chat_id,
                     text=(
                         f"🔒 *Dead-man's switch engaged.*\n"
-                        f"No activity for {round(days,1)} days. Outbound actions are paused.\n"
+                        f"No activity for {round(days, 1)} days. Outbound actions are paused.\n"
                         f"To unlock, message me with this recovery code: `{code}`"
                     ),
                     parse_mode="Markdown",
                 )
-            except Exception:
-                pass
 
     if days >= data.get("escalate_after_days", 14) and not data.get("escalated"):
         contact = data.get("trusted_contact_chat_id")
@@ -147,9 +150,10 @@ async def daily_tick() -> dict:
             try:
                 await CTX.bot.send_message(
                     chat_id=contact,
-                    text=data.get("trusted_contact_text") or
-                         f"OpenGriffin escalation: my user has not checked in for {round(days,1)} days. "
-                         "Recovery code (if requested by them): " + (data.get("recovery_code") or "(missing)"),
+                    text=data.get("trusted_contact_text")
+                    or f"OpenGriffin escalation: my user has not checked in for {round(days, 1)} days. "
+                    "Recovery code (if requested by them): "
+                    + (data.get("recovery_code") or "(missing)"),
                 )
                 data["escalated"] = True
                 actions.append("escalated")
@@ -184,14 +188,25 @@ async def _status(args: dict) -> dict:
     "deadman_configure",
     "Configure dead-man's switch parameters.",
     {
-        "lock_after_days": Annotated[Optional[int], "Days of silence before locking (default 7)"],
-        "escalate_after_days": Annotated[Optional[int], "Days before notifying trusted contact (default 14)"],
-        "trusted_contact_chat_id": Annotated[Optional[str], "Telegram chat id of trusted contact"],
-        "trusted_contact_text": Annotated[Optional[str], "Custom escalation message"],
+        "lock_after_days": Annotated[int | None, "Days of silence before locking (default 7)"],
+        "escalate_after_days": Annotated[
+            int | None, "Days before notifying trusted contact (default 14)"
+        ],
+        "trusted_contact_chat_id": Annotated[str | None, "Telegram chat id of trusted contact"],
+        "trusted_contact_text": Annotated[str | None, "Custom escalation message"],
     },
 )
 async def _configure(args: dict) -> dict:
-    return {"content": [{"type": "text", "text": json.dumps(configure(**{k: v for k, v in args.items() if v is not None}), indent=2)}]}
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": json.dumps(
+                    configure(**{k: v for k, v in args.items() if v is not None}), indent=2
+                ),
+            }
+        ]
+    }
 
 
 DEADMAN_SERVER = create_sdk_mcp_server(

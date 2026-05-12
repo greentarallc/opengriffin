@@ -76,7 +76,7 @@ cat /path/to/old/memory.md >> ~/.opengriffin/memories/MEMORY.md
 
 Or split into entries first (one fact per `§` block) for cleaner consolidation later.
 
-## Coming from a hosted SaaS (Magai, ChatGPT Plus, etc.)
+## Coming from a hosted SaaS (ChatGPT Plus, Claude Pro, etc.)
 
 These tools generally don't expose your full history. Best path:
 

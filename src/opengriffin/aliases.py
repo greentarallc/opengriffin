@@ -10,9 +10,7 @@ Also: per-chat custom system prompt addendum lives in the same file.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
-from typing import Optional
 
 STORE_FILE = Path(__file__).resolve().parent / "aliases.json"
 
@@ -41,7 +39,7 @@ def list_aliases() -> dict[str, str]:
     return _load().get("aliases", {})
 
 
-def get_alias(name: str) -> Optional[str]:
+def get_alias(name: str) -> str | None:
     return list_aliases().get(name)
 
 
@@ -94,7 +92,7 @@ def get_chat_model(chat_id: int) -> dict:
     return _load().get("chat_models", {}).get(str(chat_id), {})
 
 
-def set_chat_model(chat_id: int, provider: Optional[str], model: Optional[str]) -> None:
+def set_chat_model(chat_id: int, provider: str | None, model: str | None) -> None:
     data = _load()
     cm = data.setdefault("chat_models", {})
     if not provider and not model:

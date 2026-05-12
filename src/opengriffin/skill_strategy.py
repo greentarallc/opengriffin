@@ -11,11 +11,9 @@ same chat session. Suggests:
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -57,7 +55,7 @@ def co_occurrence() -> dict[tuple[str, str], int]:
     for session in _sessions_with_skills():
         skills = sorted(session)
         for i, a in enumerate(skills):
-            for b in skills[i + 1:]:
+            for b in skills[i + 1 :]:
                 matrix[(a, b)] += 1
     return dict(matrix)
 
@@ -108,10 +106,18 @@ def recommend() -> dict:
 async def _strategy(args: dict) -> dict:
     rec = recommend()
     text = (
-        "*Top used*\n" + "\n".join(f"- {n}× {s}" for s, n in rec["top_used"]) +
-        "\n\n*Never used (30+ days)*\n" + ("\n".join(f"- {s}" for s in rec["never_used"][:10]) or "(none)") +
-        "\n\n*Suggestions* (skills frequently co-used with what you have)\n" +
-        ("\n".join(f"- {s['missing']} (with {s['co_used_with']}, ×{s['weight']})" for s in rec["suggestions"]) or "(no suggestions yet — need more usage data)")
+        "*Top used*\n"
+        + "\n".join(f"- {n}× {s}" for s, n in rec["top_used"])
+        + "\n\n*Never used (30+ days)*\n"
+        + ("\n".join(f"- {s}" for s in rec["never_used"][:10]) or "(none)")
+        + "\n\n*Suggestions* (skills frequently co-used with what you have)\n"
+        + (
+            "\n".join(
+                f"- {s['missing']} (with {s['co_used_with']}, ×{s['weight']})"
+                for s in rec["suggestions"]
+            )
+            or "(no suggestions yet — need more usage data)"
+        )
     )
     return {"content": [{"type": "text", "text": text}]}
 

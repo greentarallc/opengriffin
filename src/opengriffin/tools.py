@@ -7,12 +7,13 @@ any tool runs.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
 import shutil
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 import requests
 from apscheduler.triggers.cron import CronTrigger
@@ -58,7 +59,7 @@ def _parse_schedule(spec: str) -> tuple[str, Any]:
     """
     spec = spec.strip()
     if spec.startswith("every "):
-        rest = spec[len("every "):].strip()
+        rest = spec[len("every ") :].strip()
         m = re.fullmatch(r"(\d+)([smhdw])", rest)
         if not m:
             raise ValueError(f"interval format must be 'every <N><s|m|h|d|w>': {rest}")
@@ -69,9 +70,11 @@ def _parse_schedule(spec: str) -> tuple[str, Any]:
         n, u = int(spec[:-1]), spec[-1]
         kw = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days", "w": "weeks"}[u]
         import datetime as dt
+
         return "date", DateTrigger(run_date=dt.datetime.now() + dt.timedelta(**{kw: n}))
     if "T" in spec and re.match(r"^\d{4}-\d{2}-\d{2}T", spec):
         import datetime as dt
+
         return "date", DateTrigger(run_date=dt.datetime.fromisoformat(spec))
     return "cron", CronTrigger.from_crontab(spec)
 
@@ -108,7 +111,7 @@ async def _cron_list(args: dict) -> dict:
             "Telegram chat_id to deliver result. Pass 'home' for the configured home chat.",
         ],
         "pre_script": Annotated[
-            Optional[str], "Optional path to a Python script run before the prompt (output prepended)"
+            str | None, "Optional path to a Python script run before the prompt (output prepended)"
         ],
     },
 )
@@ -174,10 +177,8 @@ async def _cron_remove(args: dict) -> dict:
         return _err(f"job not found: {args['id']}")
     _save_jobs_raw(data)
     if CTX.scheduler is not None:
-        try:
+        with contextlib.suppress(Exception):
             CTX.scheduler.remove_job(args["id"])
-        except Exception:
-            pass
     return _ok(f"removed job {args['id']}")
 
 
@@ -193,10 +194,8 @@ async def _cron_pause(args: dict) -> dict:
             j["enabled"] = False
             _save_jobs_raw(data)
             if CTX.scheduler is not None:
-                try:
+                with contextlib.suppress(Exception):
                     CTX.scheduler.pause_job(args["id"])
-                except Exception:
-                    pass
             return _ok(f"paused {args['id']}")
     return _err(f"job not found: {args['id']}")
 
@@ -213,10 +212,8 @@ async def _cron_resume(args: dict) -> dict:
             j["enabled"] = True
             _save_jobs_raw(data)
             if CTX.scheduler is not None:
-                try:
+                with contextlib.suppress(Exception):
                     CTX.scheduler.resume_job(args["id"])
-                except Exception:
-                    pass
             return _ok(f"resumed {args['id']}")
     return _err(f"job not found: {args['id']}")
 
@@ -234,6 +231,7 @@ async def _cron_run_now(args: dict) -> dict:
     if CTX.bot is None:
         return _err("bot not ready")
     import asyncio
+
     asyncio.create_task(cron_module.run_job(job, CTX.bot))
     return _ok(f"running {job.id} now (will deliver to {job.deliver_to})")
 
@@ -245,7 +243,9 @@ async def _cron_run_now(args: dict) -> dict:
     "send_message",
     "Send a message to any Telegram chat by id. Useful for fan-out, alerting other chats, or scheduling deferred deliveries from one chat into another.",
     {
-        "chat_id": Annotated[str, "Telegram chat id (numeric). Pass 'home' for the configured home chat."],
+        "chat_id": Annotated[
+            str, "Telegram chat id (numeric). Pass 'home' for the configured home chat."
+        ],
         "text": Annotated[str, "Message text (markdown)"],
     },
 )
@@ -310,7 +310,7 @@ async def _skill_create(args: dict) -> dict:
     {
         "name": Annotated[str, "Skill name"],
         "body": Annotated[str, "New markdown body"],
-        "description": Annotated[Optional[str], "If set, also update the frontmatter description"],
+        "description": Annotated[str | None, "If set, also update the frontmatter description"],
     },
 )
 async def _skill_edit(args: dict) -> dict:
@@ -324,7 +324,13 @@ async def _skill_edit(args: dict) -> dict:
     fm_match = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.DOTALL)
     fm = fm_match.group(1) if fm_match else f"name: {args['name']}\ndescription: (no description)"
     if args.get("description"):
-        fm = re.sub(r"^description:.*$", f"description: {args['description']}", fm, count=1, flags=re.MULTILINE)
+        fm = re.sub(
+            r"^description:.*$",
+            f"description: {args['description']}",
+            fm,
+            count=1,
+            flags=re.MULTILINE,
+        )
     new = f"---\n{fm}\n---\n\n{args['body'].strip()}\n"
     path.write_text(new)
     return _ok(f"updated skill {args['name']}")
@@ -373,7 +379,7 @@ async def _skill_list(args: dict) -> dict:
     {
         "prompt": Annotated[str, "Image description"],
         "model": Annotated[
-            Optional[str],
+            str | None,
             "FAL model slug; defaults to fal-ai/flux/schnell (fast, free-tier-friendly)",
         ],
     },
@@ -414,6 +420,7 @@ async def _image_generate(args: dict) -> dict:
 )
 async def _journal_append(args: dict) -> dict:
     from . import self_improve
+
     try:
         self_improve.append_journal_entry(args["entry"])
     except Exception as e:

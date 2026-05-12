@@ -14,6 +14,7 @@ Routes:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime as dt
 import json
 from collections import deque
@@ -39,10 +40,8 @@ def emit(kind: str, **fields: Any) -> None:
     }
     _EVENTS.append(evt)
     for q in list(_subscribers):
-        try:
+        with contextlib.suppress(asyncio.QueueFull):
             q.put_nowait(evt)
-        except asyncio.QueueFull:
-            pass
 
 
 async def _handle_stream(request: web.Request) -> web.StreamResponse:

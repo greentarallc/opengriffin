@@ -19,19 +19,18 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
-import json
 import re
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
 ECHO_ROOT = Path.home() / ".opengriffin" / "memories" / "echo"
 TIERS = ("vivid", "recent", "fading", "ancient")
 TIER_BOUNDS = {  # max age in days; entries older slide to next tier
-    "vivid":   7,
-    "recent":  30,
-    "fading":  365,
+    "vivid": 7,
+    "recent": 30,
+    "fading": 365,
     "ancient": 10_000,
 }
 
@@ -58,7 +57,7 @@ def _date_key(d: dt.date | dt.datetime, granularity: str = "day") -> str:
     raise ValueError(granularity)
 
 
-def write(tier: str, entry: str, *, key: Optional[str] = None) -> str:
+def write(tier: str, entry: str, *, key: str | None = None) -> str:
     """Append/replace an entry in `tier`. Returns the citation token."""
     if tier not in TIERS:
         raise ValueError(f"unknown tier: {tier}")
@@ -67,7 +66,9 @@ def write(tier: str, entry: str, *, key: Optional[str] = None) -> str:
         key = _date_key(dt.date.today(), gran)
     path = _tier_dir(tier) / f"{key}.md"
     digest = hashlib.sha256(entry.encode("utf-8")).hexdigest()[:8]
-    block = f"\n<!-- {digest} {dt.datetime.now().isoformat(timespec='seconds')} -->\n{entry.strip()}\n"
+    block = (
+        f"\n<!-- {digest} {dt.datetime.now().isoformat(timespec='seconds')} -->\n{entry.strip()}\n"
+    )
     if path.is_file():
         path.write_text(path.read_text() + block)
     else:
@@ -80,13 +81,15 @@ def read_tier(tier: str, *, limit: int = 50) -> list[dict]:
     out = []
     files = sorted(_tier_dir(tier).glob("*.md"), reverse=True)[:limit]
     for f in files:
-        out.append({
-            "tier": tier,
-            "key": f.stem,
-            "path": str(f),
-            "content": f.read_text(),
-            "mtime": dt.datetime.fromtimestamp(f.stat().st_mtime).isoformat(timespec="seconds"),
-        })
+        out.append(
+            {
+                "tier": tier,
+                "key": f.stem,
+                "path": str(f),
+                "content": f.read_text(),
+                "mtime": dt.datetime.fromtimestamp(f.stat().st_mtime).isoformat(timespec="seconds"),
+            }
+        )
     return out
 
 
@@ -117,24 +120,28 @@ def search(query: str, *, max_per_tier: int = 5) -> list[dict]:
                     age = max((today - fdate).days, 1)
                 except Exception:
                     age = 30
-                score = weights[tier] * (1 / age ** 0.5)
+                score = weights[tier] * (1 / age**0.5)
                 # Find the entry block containing the match
                 idx = low.find(needle)
                 start = max(0, idx - 200)
-                snippet = text[start:start + 400].replace("\n", " ").strip()
+                snippet = text[start : start + 400].replace("\n", " ").strip()
                 # Try to find the receipt digest preceding the snippet
-                m = re.search(r"<!--\s*([0-9a-f]{8})", text[:idx][::-1].split("-->")[-1::-1][0]) if "<!--" in text[:idx] else None
+                re.search(
+                    r"<!--\s*([0-9a-f]{8})", text[:idx][::-1].split("-->")[-1::-1][0]
+                ) if "<!--" in text[:idx] else None
                 # Simpler: regex backwards
                 preceding = text[:idx]
                 last_marker = re.findall(r"<!--\s*([0-9a-f]{8})", preceding)
                 digest = last_marker[-1] if last_marker else "?"
-                per_tier.append({
-                    "tier": tier,
-                    "key": f.stem,
-                    "score": round(score, 3),
-                    "snippet": snippet,
-                    "receipt": f"[echo:{tier}/{f.stem}:{digest}]",
-                })
+                per_tier.append(
+                    {
+                        "tier": tier,
+                        "key": f.stem,
+                        "score": round(score, 3),
+                        "snippet": snippet,
+                        "receipt": f"[echo:{tier}/{f.stem}:{digest}]",
+                    }
+                )
         per_tier.sort(key=lambda x: -x["score"])
         hits.extend(per_tier[:max_per_tier])
     hits.sort(key=lambda x: -x["score"])
@@ -155,6 +162,7 @@ async def consolidate_nightly() -> dict:
     preferences (terseness from SOUL.md, etc.).
     """
     from . import bot as bot_module  # noqa
+
     today = dt.date.today()
     moved = {"vivid_to_recent": 0, "recent_to_fading": 0, "fading_to_ancient": 0}
 
@@ -252,7 +260,9 @@ async def _recall(args: dict) -> dict:
     hits = search(args["query"])
     if not hits:
         return {"content": [{"type": "text", "text": "(no matches)"}]}
-    lines = [f"{h['receipt']} ({h['tier']}, score {h['score']}): {h['snippet'][:200]}" for h in hits[:8]]
+    lines = [
+        f"{h['receipt']} ({h['tier']}, score {h['score']}): {h['snippet'][:200]}" for h in hits[:8]
+    ]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 

@@ -26,12 +26,10 @@ import json
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from . import echo_memory  # type: ignore — package-relative
-from . import memory as mem_mod  # type: ignore
 
 app = typer.Typer(name="migrate", help="Import from Hermes or OpenClaw")
 
@@ -51,7 +49,11 @@ def _port_hermes_memories(src: Path, dst_dir: Path) -> int:
             target = dst_dir / fname
             if target.is_file():
                 # Merge: append Hermes content as a separator block
-                target.write_text(target.read_text() + f"\n\n§\n\n# Imported from Hermes {dt.date.today()}\n\n" + s.read_text())
+                target.write_text(
+                    target.read_text()
+                    + f"\n\n§\n\n# Imported from Hermes {dt.date.today()}\n\n"
+                    + s.read_text()
+                )
             else:
                 shutil.copy2(s, target)
             _say(f"memories/{fname}")
@@ -73,24 +75,23 @@ def _port_hermes_cron(src: Path, dst: Path) -> int:
         if not j.get("enabled", True):
             continue
         sched = j.get("schedule", {})
-        if isinstance(sched, dict):
-            expr = sched.get("expr") or sched.get("display")
-        else:
-            expr = sched
+        expr = sched.get("expr") or sched.get("display") if isinstance(sched, dict) else sched
         if not expr:
             continue
         deliver_to = ""
         origin = j.get("origin")
         if isinstance(origin, dict) and origin.get("platform") == "telegram":
             deliver_to = origin.get("chat_id", "")
-        out_jobs.append({
-            "id": j.get("id", "imported-" + str(len(out_jobs))),
-            "name": j.get("name", "(imported)"),
-            "schedule": expr,
-            "enabled": True,
-            "deliver_to": deliver_to,
-            "prompt": j.get("prompt", ""),
-        })
+        out_jobs.append(
+            {
+                "id": j.get("id", "imported-" + str(len(out_jobs))),
+                "name": j.get("name", "(imported)"),
+                "schedule": expr,
+                "enabled": True,
+                "deliver_to": deliver_to,
+                "prompt": j.get("prompt", ""),
+            }
+        )
     if not out_jobs:
         return 0
     if dst.is_file():
@@ -141,14 +142,15 @@ def _port_hermes_sessions(src: Path, max_msgs: int = 50) -> int:
         conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
         cur = conn.execute(
             "SELECT timestamp, role, substr(content, 1, 200) FROM messages "
-            "WHERE role='user' ORDER BY timestamp DESC LIMIT ?", (max_msgs,)
+            "WHERE role='user' ORDER BY timestamp DESC LIMIT ?",
+            (max_msgs,),
         )
         rows = cur.fetchall()
         conn.close()
     except Exception:
         return 0
     n = 0
-    for ts, role, content in rows:
+    for ts, _role, content in rows:
         if not content:
             continue
         echo_memory.write("recent", f"[hermes import @ {ts}] {content}", key=str(ts)[:10])
@@ -210,7 +212,11 @@ def _port_openclaw_memory(src: Path, dst: Path) -> int:
     if found is None:
         return 0
     if dst.is_file():
-        dst.write_text(dst.read_text() + f"\n\n§\n\n# Imported from OpenClaw {dt.date.today()}\n\n" + found.read_text())
+        dst.write_text(
+            dst.read_text()
+            + f"\n\n§\n\n# Imported from OpenClaw {dt.date.today()}\n\n"
+            + found.read_text()
+        )
     else:
         shutil.copy2(found, dst)
     _say(f"memory from {found}")
@@ -231,7 +237,10 @@ def _port_openclaw_skills(src: Path) -> int:
         # Add Apache-2.0 frontmatter if not present
         text = f.read_text()
         if not text.startswith("---"):
-            text = f"---\nname: {name}\ndescription: (imported from OpenClaw)\nlicense: imported\n---\n\n" + text
+            text = (
+                f"---\nname: {name}\ndescription: (imported from OpenClaw)\nlicense: imported\n---\n\n"
+                + text
+            )
         (dst_dir / "SKILL.md").write_text(text)
         n += 1
     if n:

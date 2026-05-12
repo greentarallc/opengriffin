@@ -18,9 +18,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
-from . import Gateway, Handler, Message, Reply
+from . import Handler, Message
 
 log = logging.getLogger("opengriffin.gateways.slack")
 
@@ -30,8 +29,10 @@ class SlackGateway:
 
     def __init__(self):
         try:
+            from slack_bolt.adapter.socket_mode.async_handler import (
+                AsyncSocketModeHandler,  # noqa: F401
+            )
             from slack_bolt.async_app import AsyncApp  # noqa: F401
-            from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler  # noqa: F401
         except ImportError as e:
             raise RuntimeError("Install with: pip install 'opengriffin[slack]'") from e
         self._bot_token = os.environ.get("SLACK_BOT_TOKEN")
@@ -40,14 +41,14 @@ class SlackGateway:
             raise RuntimeError("SLACK_BOT_TOKEN + SLACK_APP_TOKEN required")
         raw = os.environ.get("SLACK_ALLOWED_USERS", "").strip()
         self._allowed: set[str] = {x for x in raw.replace(",", " ").split() if x.strip()}
-        self._handler_obj: Optional[object] = None
+        self._handler_obj: object | None = None
 
     def _authorized(self, user_id: str) -> bool:
         return not self._allowed or user_id in self._allowed
 
     async def start(self, handler: Handler) -> None:
-        from slack_bolt.async_app import AsyncApp
         from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
+        from slack_bolt.async_app import AsyncApp
 
         app = AsyncApp(token=self._bot_token)
 
@@ -77,7 +78,7 @@ class SlackGateway:
                 await say(f"Error: {e}")
                 return
             for i in range(0, len(reply.text), 3500):
-                await say(reply.text[i:i + 3500])
+                await say(reply.text[i : i + 3500])
 
         app.message()(on_message)
         app.event("app_mention")(on_message)

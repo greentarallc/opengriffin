@@ -18,9 +18,8 @@ import json
 import logging
 import os
 import subprocess
-from typing import Optional
 
-from . import Gateway, Handler, Message, Reply
+from . import Handler, Message
 
 log = logging.getLogger("opengriffin.gateways.signal")
 
@@ -36,7 +35,7 @@ class SignalGateway:
             raise RuntimeError("signal-cli not in PATH; brew install signal-cli")
         raw = os.environ.get("SIGNAL_ALLOWED_NUMBERS", "").strip()
         self._allowed = {x.strip() for x in raw.split(",") if x.strip()}
-        self._proc: Optional[asyncio.subprocess.Process] = None
+        self._proc: asyncio.subprocess.Process | None = None
         self._stop = False
 
     def _authorized(self, number: str) -> bool:
@@ -45,7 +44,14 @@ class SignalGateway:
     async def start(self, handler: Handler) -> None:
         # signal-cli daemon mode: outputs incoming messages as JSON lines
         self._proc = await asyncio.create_subprocess_exec(
-            "signal-cli", "-a", self._number, "--output", "json", "receive", "--timeout", "10",
+            "signal-cli",
+            "-a",
+            self._number,
+            "--output",
+            "json",
+            "receive",
+            "--timeout",
+            "10",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -56,7 +62,14 @@ class SignalGateway:
                 # Re-spawn on EOF
                 await asyncio.sleep(2)
                 self._proc = await asyncio.create_subprocess_exec(
-                    "signal-cli", "-a", self._number, "--output", "json", "receive", "--timeout", "10",
+                    "signal-cli",
+                    "-a",
+                    self._number,
+                    "--output",
+                    "json",
+                    "receive",
+                    "--timeout",
+                    "10",
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
@@ -92,7 +105,9 @@ class SignalGateway:
         try:
             subprocess.run(
                 ["signal-cli", "-a", self._number, "send", "-m", body, recipient],
-                check=True, capture_output=True, timeout=15,
+                check=True,
+                capture_output=True,
+                timeout=15,
             )
         except subprocess.CalledProcessError as e:
             log.warning("signal send failed: %s", e.stderr[:200])

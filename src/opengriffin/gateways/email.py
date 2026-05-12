@@ -20,9 +20,8 @@ import logging
 import os
 import smtplib
 from email.message import EmailMessage
-from typing import Optional
 
-from . import Gateway, Handler, Message, Reply
+from . import Handler, Message
 
 log = logging.getLogger("opengriffin.gateways.email")
 
@@ -91,7 +90,9 @@ class EmailGateway:
                     reply = loop.run_until_complete(handler(normalized))
                 finally:
                     loop.close()
-                self._send(from_addr, "Re: " + subject, reply.text, in_reply_to=msg_obj.get("Message-Id"))
+                self._send(
+                    from_addr, "Re: " + subject, reply.text, in_reply_to=msg_obj.get("Message-Id")
+                )
 
     @staticmethod
     def _extract_text(msg) -> str:
@@ -101,7 +102,7 @@ class EmailGateway:
                     return part.get_payload(decode=True).decode("utf-8", errors="replace")
         return msg.get_payload(decode=True).decode("utf-8", errors="replace")
 
-    def _send(self, to_addr: str, subject: str, body: str, in_reply_to: Optional[str] = None) -> None:
+    def _send(self, to_addr: str, subject: str, body: str, in_reply_to: str | None = None) -> None:
         em = EmailMessage()
         em["From"] = self._from_addr
         em["To"] = to_addr

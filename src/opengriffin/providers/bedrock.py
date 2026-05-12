@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 
 
@@ -17,9 +16,12 @@ class BedrockProvider:
         except ImportError as e:
             raise RuntimeError("Install with: pip install 'opengriffin[bedrock]'") from e
         import boto3
+
         region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
         self._client = boto3.client("bedrock-runtime", region_name=region)
-        self.model = model or os.environ.get("OPENGRIFFIN_MODEL", "us.anthropic.claude-opus-4-7-v1:0")
+        self.model = model or os.environ.get(
+            "OPENGRIFFIN_MODEL", "us.anthropic.claude-opus-4-7-v1:0"
+        )
 
     async def chat(self, messages: list[dict], tools: list | None = None) -> dict:
         # Use converse API (model-agnostic)
@@ -29,6 +31,7 @@ class BedrockProvider:
             if m["role"] in ("user", "assistant")
         ]
         import asyncio
+
         resp = await asyncio.to_thread(
             self._client.converse,
             modelId=self.model,

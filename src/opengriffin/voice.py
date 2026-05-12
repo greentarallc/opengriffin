@@ -10,7 +10,6 @@ import logging
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 log = logging.getLogger("opengriffin.voice")
 
@@ -41,6 +40,7 @@ def _ogg_to_wav(ogg_path: Path) -> Path:
 
 async def transcribe_ogg(ogg_bytes: bytes) -> str:
     """Run STT in a thread to keep the asyncio loop responsive."""
+
     def _work() -> str:
         with tempfile.TemporaryDirectory() as td:
             ogg_path = Path(td) / "in.ogg"
@@ -53,7 +53,7 @@ async def transcribe_ogg(ogg_bytes: bytes) -> str:
     return await asyncio.to_thread(_work)
 
 
-async def synthesize_ogg(text: str, voice: Optional[str] = None) -> bytes:
+async def synthesize_ogg(text: str, voice: str | None = None) -> bytes:
     """Use edge-tts to render text to MP3, then convert to OGG/Opus for Telegram voice."""
     import edge_tts
 

@@ -20,7 +20,6 @@ Storage:
 
 from __future__ import annotations
 
-import datetime as dt
 import fnmatch
 import hashlib
 import hmac
@@ -28,7 +27,7 @@ import json
 import secrets
 import time
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -67,8 +66,9 @@ def _sign(token: dict) -> str:
     return hmac.new(_secret(), _canonical(token).encode(), hashlib.sha256).hexdigest()
 
 
-def mint(scope: str, *, ttl_seconds: int = 3600, cap_usd: Optional[float] = None,
-         note: str = "") -> dict:
+def mint(
+    scope: str, *, ttl_seconds: int = 3600, cap_usd: float | None = None, note: str = ""
+) -> dict:
     """Issue a new capability token."""
     token = {
         "id": secrets.token_hex(8),
@@ -87,7 +87,7 @@ def mint(scope: str, *, ttl_seconds: int = 3600, cap_usd: Optional[float] = None
     return token
 
 
-def verify(token_id: str) -> Optional[dict]:
+def verify(token_id: str) -> dict | None:
     """Return the token if valid (signature OK + not expired), else None."""
     data = _load()
     tok = next((t for t in data["tokens"] if t.get("id") == token_id), None)
@@ -104,7 +104,11 @@ def verify(token_id: str) -> Optional[dict]:
 def covers(tok: dict, requested_scope: str) -> bool:
     """Token scope can be exact match or fnmatch pattern (e.g. 'Bash:git*')."""
     scope = tok.get("scope", "")
-    return scope == requested_scope or fnmatch.fnmatch(requested_scope, scope) or fnmatch.fnmatch(scope, requested_scope)
+    return (
+        scope == requested_scope
+        or fnmatch.fnmatch(requested_scope, scope)
+        or fnmatch.fnmatch(scope, requested_scope)
+    )
 
 
 def consume(token_id: str, *, amount_usd: float = 0.0) -> bool:
@@ -145,10 +149,13 @@ def list_active() -> list[dict]:
     "capability_mint",
     "Mint a new short-lived capability token granting a specific tool scope. Returns token id which the agent presents on subsequent gated tool calls.",
     {
-        "scope": Annotated[str, "Tool scope: e.g. 'Bash', 'Bash:git*', 'wallet:pay', 'WebFetch:https://api.X.com/*'"],
-        "ttl_seconds": Annotated[Optional[int], "TTL in seconds (default 3600 = 1h)"],
-        "cap_usd": Annotated[Optional[float], "Optional dollar cap (e.g. for wallet scopes)"],
-        "note": Annotated[Optional[str], "Why this token was minted"],
+        "scope": Annotated[
+            str,
+            "Tool scope: e.g. 'Bash', 'Bash:git*', 'wallet:pay', 'WebFetch:https://api.X.com/*'",
+        ],
+        "ttl_seconds": Annotated[int | None, "TTL in seconds (default 3600 = 1h)"],
+        "cap_usd": Annotated[float | None, "Optional dollar cap (e.g. for wallet scopes)"],
+        "note": Annotated[str | None, "Why this token was minted"],
     },
 )
 async def _mint(args: dict) -> dict:
@@ -158,7 +165,17 @@ async def _mint(args: dict) -> dict:
         cap_usd=float(args["cap_usd"]) if args.get("cap_usd") is not None else None,
         note=args.get("note") or "",
     )
-    return {"content": [{"type": "text", "text": json.dumps({"id": tok["id"], "scope": tok["scope"], "expires_at": tok["expires_at"]}, indent=2)}]}
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": json.dumps(
+                    {"id": tok["id"], "scope": tok["scope"], "expires_at": tok["expires_at"]},
+                    indent=2,
+                ),
+            }
+        ]
+    }
 
 
 @tool(
@@ -172,10 +189,29 @@ async def _mint(args: dict) -> dict:
 async def _verify(args: dict) -> dict:
     tok = verify(args["token_id"])
     if tok is None:
-        return {"content": [{"type": "text", "text": "INVALID: token missing/expired/bad signature"}], "is_error": True}
+        return {
+            "content": [{"type": "text", "text": "INVALID: token missing/expired/bad signature"}],
+            "is_error": True,
+        }
     if not covers(tok, args["requested_scope"]):
-        return {"content": [{"type": "text", "text": f"INVALID: token scope '{tok['scope']}' doesn't cover '{args['requested_scope']}'"}], "is_error": True}
-    return {"content": [{"type": "text", "text": "VALID: " + json.dumps({k: v for k, v in tok.items() if k != "signature"}, indent=2)}]}
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"INVALID: token scope '{tok['scope']}' doesn't cover '{args['requested_scope']}'",
+                }
+            ],
+            "is_error": True,
+        }
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": "VALID: "
+                + json.dumps({k: v for k, v in tok.items() if k != "signature"}, indent=2),
+            }
+        ]
+    }
 
 
 @tool(
@@ -187,7 +223,10 @@ async def _list(args: dict) -> dict:
     items = list_active()
     if not items:
         return {"content": [{"type": "text", "text": "(no active tokens)"}]}
-    lines = [f"{t['id']} scope={t['scope']} ttl={int(t['expires_at']-time.time())}s uses={t.get('uses',0)} cap={t.get('cap_usd')}" for t in items]
+    lines = [
+        f"{t['id']} scope={t['scope']} ttl={int(t['expires_at'] - time.time())}s uses={t.get('uses', 0)} cap={t.get('cap_usd')}"
+        for t in items
+    ]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 
@@ -198,7 +237,10 @@ async def _list(args: dict) -> dict:
 )
 async def _revoke(args: dict) -> dict:
     ok = revoke(args["token_id"])
-    return {"content": [{"type": "text", "text": "revoked" if ok else "not found"}], "is_error": not ok}
+    return {
+        "content": [{"type": "text", "text": "revoked" if ok else "not found"}],
+        "is_error": not ok,
+    }
 
 
 CAPABILITIES_SERVER = create_sdk_mcp_server(

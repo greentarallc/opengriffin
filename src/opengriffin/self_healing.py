@@ -85,14 +85,19 @@ instructions there.
 async def heal_skill(skill_name: str) -> dict:
     """Run the heal pipeline for one skill. Writes a proposal and returns its path."""
     from . import bot as bot_module
+
     p = SKILLS_DIR / skill_name / "SKILL.md"
     if not p.is_file():
         return {"ok": False, "error": f"no such skill: {skill_name}"}
     failures = recent_failures(skill_name)
     if len(failures) < FAILURE_THRESHOLD:
-        return {"ok": False, "error": f"only {len(failures)} failures; threshold {FAILURE_THRESHOLD}"}
+        return {
+            "ok": False,
+            "error": f"only {len(failures)} failures; threshold {FAILURE_THRESHOLD}",
+        }
     failure_text = "\n\n".join(
-        f"[{f['ts']}] {f['error']}\ncontext: {f['context']}" for f in failures[-FAILURE_THRESHOLD * 2:]
+        f"[{f['ts']}] {f['error']}\ncontext: {f['context']}"
+        for f in failures[-FAILURE_THRESHOLD * 2 :]
     )
     prompt = HEAL_PROMPT.format(current=p.read_text(), n=len(failures), failures=failure_text)
     try:
@@ -136,7 +141,10 @@ async def _heal(args: dict) -> dict:
 )
 async def _accept(args: dict) -> dict:
     ok = accept_proposal(args["name"])
-    return {"content": [{"type": "text", "text": "applied" if ok else "no proposal found"}], "is_error": not ok}
+    return {
+        "content": [{"type": "text", "text": "applied" if ok else "no proposal found"}],
+        "is_error": not ok,
+    }
 
 
 HEAL_SERVER = create_sdk_mcp_server(

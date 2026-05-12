@@ -27,7 +27,9 @@ def _safe_relpath(p: Path) -> str:
     return s.lstrip("_") or "root"
 
 
-async def pre_tool_use_hook(input_data: dict[str, Any], tool_use_id: str | None, context: Any) -> dict[str, Any]:
+async def pre_tool_use_hook(
+    input_data: dict[str, Any], tool_use_id: str | None, context: Any
+) -> dict[str, Any]:
     """Snapshot files before Write/Edit/MultiEdit fires."""
     tool_name = input_data.get("tool_name", "")
     if tool_name not in WATCHED_TOOLS:
@@ -89,5 +91,7 @@ def rollback_latest() -> tuple[bool, str]:
 
 
 HOOKS_SPEC = {
-    "PreToolUse": [HookMatcher(matcher="Write|Edit|MultiEdit|NotebookEdit", hooks=[pre_tool_use_hook])],
+    "PreToolUse": [
+        HookMatcher(matcher="Write|Edit|MultiEdit|NotebookEdit", hooks=[pre_tool_use_hook])
+    ],
 }

@@ -16,7 +16,6 @@ import json
 import re
 import statistics
 from pathlib import Path
-from typing import Annotated, Optional
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -74,8 +73,9 @@ def analyze(samples: list[str]) -> dict:
 
     # Top recurring 2-grams
     words = re.findall(r"\w+", joined)
-    bigrams = list(zip(words, words[1:]))
+    bigrams = list(zip(words, words[1:], strict=False))
     from collections import Counter
+
     top = [b for b, c in Counter(bigrams).most_common(15) if c >= 3]
 
     return {
@@ -98,17 +98,17 @@ def build_voice_card(stats: dict) -> str:
         return "# Voice card (insufficient data)\n"
     return f"""# Voice card — {dt.date.today().isoformat()}
 
-Built from {stats['samples']} samples across recent sessions.
+Built from {stats["samples"]} samples across recent sessions.
 
-**Sentence length**: {stats['avg_sentence_len']} ± {stats['stddev_sentence_len']} words.
-**Em-dash usage**: {stats['em_dash_rate_per_sample']}/sample.
-**Contractions**: {stats['contraction_rate_per_sample']}/sample.
-**Hedges** (maybe/perhaps/I think): {stats['hedge_rate_per_sample']}/sample. {"Low — direct voice." if stats['hedge_rate_per_sample'] < 0.5 else "Moderate."}
-**First-person 'I'**: {stats['first_person_rate_per_sample']}/sample.
-**Question marks**: {stats['question_rate_per_sample']}/sample.
+**Sentence length**: {stats["avg_sentence_len"]} ± {stats["stddev_sentence_len"]} words.
+**Em-dash usage**: {stats["em_dash_rate_per_sample"]}/sample.
+**Contractions**: {stats["contraction_rate_per_sample"]}/sample.
+**Hedges** (maybe/perhaps/I think): {stats["hedge_rate_per_sample"]}/sample. {"Low — direct voice." if stats["hedge_rate_per_sample"] < 0.5 else "Moderate."}
+**First-person 'I'**: {stats["first_person_rate_per_sample"]}/sample.
+**Question marks**: {stats["question_rate_per_sample"]}/sample.
 
 **Recurring phrases**:
-{chr(10).join('- ' + p for p in stats['frequent_phrases'])}
+{chr(10).join("- " + p for p in stats["frequent_phrases"])}
 
 When asked to "draft as me" or write in this voice:
 - Match sentence length distribution.

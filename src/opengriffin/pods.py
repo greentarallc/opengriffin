@@ -12,12 +12,11 @@ Storage:
 
 from __future__ import annotations
 
-import asyncio
 import datetime as dt
 import json
 import logging
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -26,7 +25,7 @@ log = logging.getLogger("opengriffin.pods")
 PODS_FILE = Path.home() / ".opengriffin" / "pods.json"
 PODS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-MAX_TURNS = 8           # avoid infinite agent-back-and-forth
+MAX_TURNS = 8  # avoid infinite agent-back-and-forth
 CONVERGENCE_KEYWORDS = ("agreed", "agree", "let's go with", "ship it", "lgtm", "yes that's right")
 
 
@@ -54,6 +53,7 @@ async def run_pod_turn(pod_name: str, user_message: str, chat_id: int) -> str:
       - MAX_TURNS hit.
     """
     from . import bot as bot_module  # noqa
+
     pods = _load().get("pods", {})
     pod = pods.get(pod_name)
     if pod is None:
@@ -75,19 +75,21 @@ async def run_pod_turn(pod_name: str, user_message: str, chat_id: int) -> str:
         if soul_path and Path(soul_path).is_file():
             soul_addendum = "\n\nYour persona:\n" + Path(soul_path).read_text()
 
-        history = "\n".join(
-            f"@{x['speaker']}: {x['text']}" for x in transcript
-        )
+        history = "\n".join(f"@{x['speaker']}: {x['text']}" for x in transcript)
         prompt = (
             f"You are agent @{agent['name']} in a group conversation. "
             f"{soul_addendum}\n\n"
-            "Other agents in the pod: " + ", ".join("@" + a["name"] for a in agents if a["name"] != agent["name"]) + ".\n\n"
+            "Other agents in the pod: "
+            + ", ".join("@" + a["name"] for a in agents if a["name"] != agent["name"])
+            + ".\n\n"
             f"Conversation so far:\n{history}\n\n"
             f"Reply as @{agent['name']}. If you agree with the latest message and "
             f"have nothing to add, end your reply with the literal token 'AGREED'."
         )
         try:
-            reply = await bot_module.ask_claude_with_progress(chat_id, prompt, None, status_msg_id=None)
+            reply = await bot_module.ask_claude_with_progress(
+                chat_id, prompt, None, status_msg_id=None
+            )
         except Exception as e:
             log.exception("pod turn failed")
             return f"pod error on turn {turn}: {e}"
@@ -98,8 +100,7 @@ async def run_pod_turn(pod_name: str, user_message: str, chat_id: int) -> str:
 
         # Convergence: all agents spoken AND signal of agreement
         if len(spoken) >= len(agents) and (
-            "agreed" in last_text[-200:] or
-            any(k in last_text for k in CONVERGENCE_KEYWORDS)
+            "agreed" in last_text[-200:] or any(k in last_text for k in CONVERGENCE_KEYWORDS)
         ):
             break
 
@@ -116,7 +117,7 @@ async def run_pod_turn(pod_name: str, user_message: str, chat_id: int) -> str:
         "name": Annotated[str, "Pod name (e.g. 'eng-pod')"],
         "agents": Annotated[
             str,
-            "JSON list. Each agent: {name, soul_path (optional), provider (optional), model (optional)}. Example: '[{\"name\":\"researcher\"},{\"name\":\"engineer\"}]'",
+            'JSON list. Each agent: {name, soul_path (optional), provider (optional), model (optional)}. Example: \'[{"name":"researcher"},{"name":"engineer"}]\'',
         ],
     },
 )
@@ -125,14 +126,21 @@ async def _pod_create(args: dict) -> dict:
         agents = json.loads(args["agents"])
         assert isinstance(agents, list) and agents
     except Exception as e:
-        return {"content": [{"type": "text", "text": f"agents JSON invalid: {e}"}], "is_error": True}
+        return {
+            "content": [{"type": "text", "text": f"agents JSON invalid: {e}"}],
+            "is_error": True,
+        }
     data = _load()
     data["pods"][args["name"]] = {
         "agents": agents,
         "created_at": dt.datetime.now().isoformat(timespec="seconds"),
     }
     _save(data)
-    return {"content": [{"type": "text", "text": f"pod {args['name']} created with {len(agents)} agents"}]}
+    return {
+        "content": [
+            {"type": "text", "text": f"pod {args['name']} created with {len(agents)} agents"}
+        ]
+    }
 
 
 @tool(
@@ -157,8 +165,10 @@ async def _pod_list(args: dict) -> dict:
     pods = _load().get("pods", {})
     if not pods:
         return {"content": [{"type": "text", "text": "(no pods)"}]}
-    lines = [f"{name} — {len(p['agents'])} agents: {', '.join(a['name'] for a in p['agents'])}"
-             for name, p in pods.items()]
+    lines = [
+        f"{name} — {len(p['agents'])} agents: {', '.join(a['name'] for a in p['agents'])}"
+        for name, p in pods.items()
+    ]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 

@@ -19,11 +19,10 @@ import json
 import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import urllib.request
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -134,7 +133,8 @@ def install(source: str, *, allow_unknown_license: bool = False) -> dict:
                     try:
                         skills_found.append(
                             _install_skill_dir(
-                                skill_dir, name,
+                                skill_dir,
+                                name,
                                 source=f"github://{owner}/{repo}/{skill_dir.relative_to(repo_dir)}",
                                 license_kind=license_kind,
                             )
@@ -162,8 +162,10 @@ def install(source: str, *, allow_unknown_license: bool = False) -> dict:
             m = re.search(r"^name:\s*(.+)$", text, re.MULTILINE)
             if not m:
                 raise ValueError("frontmatter `name:` required")
-            name = m.group(1).strip().strip('"\'')
-            entry = _install_skill_dir(tmp_skill, name, source=source, license_kind="unknown-direct-url")
+            name = m.group(1).strip().strip("\"'")
+            entry = _install_skill_dir(
+                tmp_skill, name, source=source, license_kind="unknown-direct-url"
+            )
             return {"mode": "single", "installed": [entry], "license": "unknown"}
         else:
             raise ValueError(f"unrecognized source: {source}")
@@ -203,11 +205,9 @@ def reputation(name: str) -> dict:
         return {"name": name, "score": 0, "reason": "not installed"}
     if e.get("uninstalled_at"):
         return {"name": name, "score": 0, "reason": "uninstalled"}
-    age_days = (
-        dt.datetime.now() - dt.datetime.fromisoformat(e["installed_at"])
-    ).days or 1
+    age_days = (dt.datetime.now() - dt.datetime.fromisoformat(e["installed_at"])).days or 1
     use = e.get("use_count", 0)
-    score = min(100, int(use * 10 / age_days ** 0.5))
+    score = min(100, int(use * 10 / age_days**0.5))
     return {"name": name, "score": score, "use_count": use, "age_days": age_days}
 
 
@@ -219,12 +219,16 @@ def reputation(name: str) -> dict:
     "Install a skill from GitHub or a URL. Source examples: 'github://owner/repo' (whole repo's skills/), 'github://owner/repo/path/to/skill', 'github-org://owner/repo' (every SKILL.md in the repo), or a direct https:// URL to a SKILL.md.",
     {
         "source": Annotated[str, "Source URI"],
-        "allow_unknown_license": Annotated[Optional[bool], "Skip the permissive-license check (use with care)"],
+        "allow_unknown_license": Annotated[
+            bool | None, "Skip the permissive-license check (use with care)"
+        ],
     },
 )
 async def _install(args: dict) -> dict:
     try:
-        result = install(args["source"], allow_unknown_license=bool(args.get("allow_unknown_license")))
+        result = install(
+            args["source"], allow_unknown_license=bool(args.get("allow_unknown_license"))
+        )
     except (subprocess.CalledProcessError, ValueError, PermissionError) as e:
         return {"content": [{"type": "text", "text": f"install failed: {e}"}], "is_error": True}
     summary = f"installed {len(result['installed'])} skill(s) (license={result['license']})"

@@ -21,7 +21,7 @@ import datetime as dt
 import json
 import os
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -96,7 +96,7 @@ def build_profile(handle: str, *, public: bool = True) -> dict:
         "kanban": _kanban_stats(),
         "usage": _usage_stats(),
         "authored_skills": _user_authored_skills(handle),
-        "specialties": [],   # filled from skill_strategy.usage_counts top categories
+        "specialties": [],  # filled from skill_strategy.usage_counts top categories
         "version": "0.1",
     }
     return profile
@@ -106,11 +106,12 @@ def sign_profile(profile: dict) -> dict:
     """Sign with an Ed25519 key if available; otherwise produce an unsigned payload."""
     payload = json.dumps(profile, sort_keys=True, separators=(",", ":")).encode("utf-8")
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
         from cryptography.hazmat.primitives import serialization
     except ImportError:
         return {"profile": profile, "signature": None, "warning": "cryptography not installed"}
-    key_path = os.environ.get("OPENGRIFFIN_SIGNING_KEY") or str(Path.home() / ".opengriffin" / "signing.key")
+    key_path = os.environ.get("OPENGRIFFIN_SIGNING_KEY") or str(
+        Path.home() / ".opengriffin" / "signing.key"
+    )
     if not Path(key_path).is_file():
         return {"profile": profile, "signature": None, "warning": "no signing key at " + key_path}
     pk = serialization.load_pem_private_key(Path(key_path).read_bytes(), password=None)

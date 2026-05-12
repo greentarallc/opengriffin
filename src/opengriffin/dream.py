@@ -19,7 +19,6 @@ from __future__ import annotations
 import datetime as dt
 import json
 import logging
-import random
 from pathlib import Path
 from typing import Annotated
 
@@ -112,6 +111,7 @@ Existing MEMORY.md (do not duplicate):
 async def run_dream_cycle() -> dict:
     """The nightly job. Returns a summary."""
     from . import bot as bot_module
+
     sids = _interesting_sessions(limit=5)
     if not sids:
         return {"sessions": 0, "dreams": 0, "lessons": 0}
@@ -169,7 +169,11 @@ async def run_dream_cycle() -> dict:
         except Exception as e:
             log.warning("dream distill failed: %s", e)
 
-    return {"sessions_dreamt": len(sids), "dreams_recorded": len(dreams), "lessons_added": lessons_added}
+    return {
+        "sessions_dreamt": len(sids),
+        "dreams_recorded": len(dreams),
+        "lessons_added": lessons_added,
+    }
 
 
 @tool(
@@ -190,12 +194,14 @@ async def _dream(args: dict) -> dict:
 async def _log(args: dict) -> dict:
     if not DREAM_LOG.is_file():
         return {"content": [{"type": "text", "text": "no dreams yet"}]}
-    lines = DREAM_LOG.read_text().splitlines()[-int(args.get("n") or 10):]
+    lines = DREAM_LOG.read_text().splitlines()[-int(args.get("n") or 10) :]
     out = []
     for line in lines:
         try:
             d = json.loads(line)
-            out.append(f"[{d.get('dreamt_at')}] decision: {d.get('key_decision','?')[:80]}\n  → lesson: {d.get('lesson','?')[:120]}")
+            out.append(
+                f"[{d.get('dreamt_at')}] decision: {d.get('key_decision', '?')[:80]}\n  → lesson: {d.get('lesson', '?')[:120]}"
+            )
         except Exception:
             continue
     return {"content": [{"type": "text", "text": "\n\n".join(out)}]}

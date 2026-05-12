@@ -20,7 +20,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -51,7 +51,7 @@ def lock(*, when_iso: str, action_kind: str, payload: dict, note: str = "") -> d
     entry = {
         "id": uuid.uuid4().hex[:8],
         "when_iso": when_iso,
-        "action_kind": action_kind,   # "send" | "agent_run" | "shell"
+        "action_kind": action_kind,  # "send" | "agent_run" | "shell"
         "payload": payload,
         "note": note,
         "created_at": dt.datetime.now().isoformat(timespec="seconds"),
@@ -78,14 +78,21 @@ def veto(lock_id: str) -> bool:
 def list_active() -> list[dict]:
     data = _load()
     now = dt.datetime.now()
-    return [e for e in data["locks"] if not e.get("executed") and not e.get("vetoed")
-            and dt.datetime.fromisoformat(e["when_iso"]) > now]
+    return [
+        e
+        for e in data["locks"]
+        if not e.get("executed")
+        and not e.get("vetoed")
+        and dt.datetime.fromisoformat(e["when_iso"]) > now
+    ]
 
 
 async def fire(lock_id: str) -> str:
     """Called by APScheduler at the lock's time. Runs unless vetoed."""
-    from . import bot as bot_module
     from botctx import CTX
+
+    from . import bot as bot_module
+
     data = _load()
     entry = next((e for e in data["locks"] if e["id"] == lock_id), None)
     if entry is None:
@@ -107,9 +114,12 @@ async def fire(lock_id: str) -> str:
             result = "sent"
         elif kind == "agent_run":
             prompt = payload.get("prompt", "")
-            result = (await bot_module.ask_claude_with_progress(0, prompt, CTX.bot, status_msg_id=None))[:500]
+            result = (
+                await bot_module.ask_claude_with_progress(0, prompt, CTX.bot, status_msg_id=None)
+            )[:500]
         elif kind == "shell":
             import subprocess
+
             cmd = payload.get("command", "")
             r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
             result = f"exit={r.returncode}\n{r.stdout[:1000]}{r.stderr[:500]}"
@@ -128,6 +138,7 @@ async def fire(lock_id: str) -> str:
 def install_into_scheduler(scheduler) -> int:
     """Schedule firing for every active timelock."""
     from apscheduler.triggers.date import DateTrigger
+
     n = 0
     for e in list_active():
         try:
@@ -152,16 +163,23 @@ def install_into_scheduler(scheduler) -> int:
         "when_iso": Annotated[str, "ISO 8601 timestamp (e.g. '2026-05-10T15:00')"],
         "action_kind": Annotated[str, "send | agent_run | shell"],
         "payload_json": Annotated[str, "JSON payload for the action"],
-        "note": Annotated[Optional[str], "Why this lock exists"],
+        "note": Annotated[str | None, "Why this lock exists"],
     },
 )
 async def _create(args: dict) -> dict:
     payload = json.loads(args["payload_json"])
-    entry = lock(when_iso=args["when_iso"], action_kind=args["action_kind"], payload=payload, note=args.get("note") or "")
+    entry = lock(
+        when_iso=args["when_iso"],
+        action_kind=args["action_kind"],
+        payload=payload,
+        note=args.get("note") or "",
+    )
     # Schedule it now
     from botctx import CTX
+
     if CTX.scheduler:
         from apscheduler.triggers.date import DateTrigger
+
         CTX.scheduler.add_job(
             fire,
             trigger=DateTrigger(run_date=dt.datetime.fromisoformat(entry["when_iso"])),
@@ -180,7 +198,10 @@ async def _create(args: dict) -> dict:
 )
 async def _veto(args: dict) -> dict:
     ok = veto(args["id"])
-    return {"content": [{"type": "text", "text": "vetoed" if ok else "not found / already executed"}], "is_error": not ok}
+    return {
+        "content": [{"type": "text", "text": "vetoed" if ok else "not found / already executed"}],
+        "is_error": not ok,
+    }
 
 
 @tool(
@@ -192,7 +213,10 @@ async def _list(args: dict) -> dict:
     items = list_active()
     if not items:
         return {"content": [{"type": "text", "text": "(no active locks)"}]}
-    lines = [f"{e['id']} @ {e['when_iso']} — {e['action_kind']} — {e.get('note','')[:80]}" for e in items]
+    lines = [
+        f"{e['id']} @ {e['when_iso']} — {e['action_kind']} — {e.get('note', '')[:80]}"
+        for e in items
+    ]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 

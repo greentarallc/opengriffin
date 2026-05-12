@@ -1,7 +1,5 @@
 """Capability token: mint, verify, scope-cover, expiry."""
 
-import time
-
 from opengriffin import capabilities as caps
 
 
