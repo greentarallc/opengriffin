@@ -5,6 +5,7 @@ Serves a d3 force-directed skill graph plus journal and usage panels.
 Run standalone:
     python -m opengriffin.dashboard.server
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -23,6 +24,7 @@ USAGE_FILE = Path.home() / ".opengriffin" / "usage.jsonl"
 # ---------------------------------------------------------------------------
 # data loading
 # ---------------------------------------------------------------------------
+
 
 def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     """Parse a leading YAML-ish frontmatter block. Returns (mapping, body)."""
@@ -176,6 +178,7 @@ def _load_usage(n: int = 30) -> list[dict[str, Any]]:
 # handlers
 # ---------------------------------------------------------------------------
 
+
 async def _index(request: web.Request) -> web.Response:
     return web.Response(text=INDEX_HTML, content_type="text/html")
 
@@ -198,6 +201,7 @@ async def _api_usage(request: web.Request) -> web.Response:
 # ---------------------------------------------------------------------------
 # app factory + entrypoint
 # ---------------------------------------------------------------------------
+
 
 def make_app() -> web.Application:
     app = web.Application()
@@ -550,6 +554,7 @@ function hideTooltip() { document.getElementById('tooltip').style.display = 'non
 
 
 if __name__ == "__main__":
+
     async def _main() -> None:
         port = 8765
         runner = await start(port)

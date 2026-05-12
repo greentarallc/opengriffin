@@ -10,7 +10,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -37,7 +37,7 @@ def _err(text: str) -> dict:
     return {"content": [{"type": "text", "text": text}], "is_error": True}
 
 
-def _find(data: dict, task_id: str) -> Optional[dict]:
+def _find(data: dict, task_id: str) -> dict | None:
     return next((t for t in data["tasks"] if t["id"] == task_id), None)
 
 
@@ -51,7 +51,7 @@ def _short_id() -> str:
     {
         "title": Annotated[str, "Short task title"],
         "body": Annotated[str, "Full task description / instructions"],
-        "assignee": Annotated[Optional[str], "Optional assignee name (defaults to 'unassigned')"],
+        "assignee": Annotated[str | None, "Optional assignee name (defaults to 'unassigned')"],
     },
 )
 async def _kanban_create(args: dict) -> dict:
@@ -75,8 +75,8 @@ async def _kanban_create(args: dict) -> dict:
     "kanban_list",
     "List kanban tasks. Optionally filter by status (todo/doing/done/blocked) or assignee.",
     {
-        "status": Annotated[Optional[str], "Filter by status"],
-        "assignee": Annotated[Optional[str], "Filter by assignee"],
+        "status": Annotated[str | None, "Filter by status"],
+        "assignee": Annotated[str | None, "Filter by assignee"],
     },
 )
 async def _kanban_list(args: dict) -> dict:
@@ -88,9 +88,7 @@ async def _kanban_list(args: dict) -> dict:
         tasks = [t for t in tasks if t["assignee"] == args["assignee"]]
     if not tasks:
         return _ok("(no matching tasks)")
-    lines = [
-        f"{t['id']} [{t['status']}] {t['assignee']} — {t['title']}" for t in tasks
-    ]
+    lines = [f"{t['id']} [{t['status']}] {t['assignee']} — {t['title']}" for t in tasks]
     return _ok("\n".join(lines))
 
 
@@ -119,7 +117,7 @@ async def _kanban_claim(args: dict) -> dict:
     "Mark a task done. Optionally store result text on the task.",
     {
         "id": Annotated[str, "Task id"],
-        "result": Annotated[Optional[str], "Optional result/output to store on the task"],
+        "result": Annotated[str | None, "Optional result/output to store on the task"],
     },
 )
 async def _kanban_complete(args: dict) -> dict:

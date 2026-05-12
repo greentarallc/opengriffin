@@ -31,12 +31,11 @@ Schema (triggers.json):
 
 from __future__ import annotations
 
-import asyncio
 import datetime as dt
 import json
 import logging
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -62,7 +61,7 @@ def _save(data: dict) -> None:
 # ----------------------------- evaluation -----------------------------
 
 
-async def evaluate(trigger: dict, event_payload: Optional[dict] = None) -> Optional[str]:
+async def evaluate(trigger: dict, event_payload: dict | None = None) -> str | None:
     """Evaluate a trigger against an inbound event. Returns the agent's response,
     or None if the predicate did not fire.
 
@@ -108,6 +107,7 @@ async def evaluate(trigger: dict, event_payload: Optional[dict] = None) -> Optio
     elif kind == "send":
         # Just send a message via the configured bot
         from botctx import CTX
+
         chat = action.get("deliver_to") or CTX.home_chat_id
         text = action.get("text", "trigger fired")
         if CTX.bot and chat:
@@ -130,6 +130,7 @@ def install_into_scheduler(scheduler) -> int:
         src = t.get("source") or {}
         if src.get("kind") == "cron":
             from apscheduler.triggers.cron import CronTrigger
+
             scheduler.add_job(
                 _run_trigger,
                 trigger=CronTrigger.from_crontab(src["expr"]),
@@ -141,6 +142,7 @@ def install_into_scheduler(scheduler) -> int:
             n += 1
         elif src.get("kind") == "poll":
             from apscheduler.triggers.interval import IntervalTrigger
+
             scheduler.add_job(
                 _run_poll_trigger,
                 trigger=IntervalTrigger(seconds=int(src.get("interval_sec", 300))),
@@ -155,24 +157,26 @@ def install_into_scheduler(scheduler) -> int:
 
 async def _run_trigger(trigger: dict) -> None:
     log.info("Trigger %s firing (cron)", trigger.get("id"))
-    await evaluate(trigger, event_payload={"fired_at": dt.datetime.now().isoformat(), "kind": "cron"})
+    await evaluate(
+        trigger, event_payload={"fired_at": dt.datetime.now().isoformat(), "kind": "cron"}
+    )
 
 
 async def _run_poll_trigger(trigger: dict) -> None:
     """For poll triggers: fetch the URL, pass payload to predicate."""
     import aiohttp
+
     src = trigger.get("source") or {}
     url = src.get("url")
     if not url:
         return
     try:
-        async with aiohttp.ClientSession() as sess:
-            async with sess.get(url, timeout=15) as resp:
-                payload = await resp.text()
-                try:
-                    payload_obj = json.loads(payload)
-                except Exception:
-                    payload_obj = {"text": payload[:2000]}
+        async with aiohttp.ClientSession() as sess, sess.get(url, timeout=15) as resp:
+            payload = await resp.text()
+            try:
+                payload_obj = json.loads(payload)
+            except Exception:
+                payload_obj = {"text": payload[:2000]}
     except Exception as e:
         log.warning("poll fetch failed: %s", e)
         return
@@ -204,18 +208,26 @@ async def webhook_dispatch(route: str, payload: dict) -> list[str]:
     {
         "id": Annotated[str, "Unique trigger id (kebab-case)"],
         "source_kind": Annotated[str, "cron | webhook | poll"],
-        "source_config": Annotated[str, "JSON config for the source. cron: {expr: '0 9 * * *'}. webhook: {route: 'stripe'}. poll: {url: '...', interval_sec: 300}"],
-        "predicate": Annotated[Optional[str], "Optional yes/no question evaluated by Claude before action fires"],
+        "source_config": Annotated[
+            str,
+            "JSON config for the source. cron: {expr: '0 9 * * *'}. webhook: {route: 'stripe'}. poll: {url: '...', interval_sec: 300}",
+        ],
+        "predicate": Annotated[
+            str | None, "Optional yes/no question evaluated by Claude before action fires"
+        ],
         "action_kind": Annotated[str, "agent | send"],
-        "action_prompt": Annotated[Optional[str], "Prompt text for action_kind=agent"],
-        "deliver_to": Annotated[Optional[str], "Chat id to deliver result; 'home' for default"],
+        "action_prompt": Annotated[str | None, "Prompt text for action_kind=agent"],
+        "deliver_to": Annotated[str | None, "Chat id to deliver result; 'home' for default"],
     },
 )
 async def _create(args: dict) -> dict:
     try:
         source_cfg = json.loads(args.get("source_config") or "{}")
     except Exception as e:
-        return {"content": [{"type": "text", "text": f"source_config invalid JSON: {e}"}], "is_error": True}
+        return {
+            "content": [{"type": "text", "text": f"source_config invalid JSON: {e}"}],
+            "is_error": True,
+        }
     trigger = {
         "id": args["id"],
         "enabled": True,
@@ -231,7 +243,11 @@ async def _create(args: dict) -> dict:
     data["triggers"] = [t for t in data["triggers"] if t["id"] != args["id"]]
     data["triggers"].append(trigger)
     _save(data)
-    return {"content": [{"type": "text", "text": f"created trigger {args['id']} (restart bot to register)"}]}
+    return {
+        "content": [
+            {"type": "text", "text": f"created trigger {args['id']} (restart bot to register)"}
+        ]
+    }
 
 
 @tool(
@@ -247,7 +263,9 @@ async def _list(args: dict) -> dict:
     for t in items:
         src = t.get("source", {})
         on_off = "✓" if t.get("enabled", True) else "✗"
-        lines.append(f"{on_off} {t['id']} — {src.get('kind')}({src.get('expr') or src.get('route') or src.get('url')})")
+        lines.append(
+            f"{on_off} {t['id']} — {src.get('kind')}({src.get('expr') or src.get('route') or src.get('url')})"
+        )
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 
@@ -261,7 +279,10 @@ async def _remove(args: dict) -> dict:
     before = len(data["triggers"])
     data["triggers"] = [t for t in data["triggers"] if t["id"] != args["id"]]
     if before == len(data["triggers"]):
-        return {"content": [{"type": "text", "text": f"no such trigger: {args['id']}"}], "is_error": True}
+        return {
+            "content": [{"type": "text", "text": f"no such trigger: {args['id']}"}],
+            "is_error": True,
+        }
     _save(data)
     return {"content": [{"type": "text", "text": f"removed {args['id']}"}]}
 

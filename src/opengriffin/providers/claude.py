@@ -25,7 +25,8 @@ class ClaudeProvider:
         chunks: list[str] = []
         async with ClaudeSDKClient(options=ClaudeAgentOptions()) as client:
             await client.query(prompt)
-            from claude_agent_sdk import AssistantMessage, TextBlock, ResultMessage
+            from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
+
             async for msg in client.receive_response():
                 if isinstance(msg, AssistantMessage):
                     for b in msg.content:

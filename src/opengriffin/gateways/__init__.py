@@ -20,29 +20,31 @@ Currently shipped:
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Optional, Protocol
+from typing import Protocol
 
 
 @dataclass
 class Message:
     """Normalized inbound message from any gateway."""
 
-    platform: str         # "telegram" | "discord" | "slack" | "email" | "imessage" | "signal" | "matrix"
-    user_id: str          # platform-specific stable ID
-    user_handle: str      # display name / handle
-    chat_id: str          # platform-specific channel/DM id
-    text: str             # message body
-    voice_bytes: Optional[bytes] = None     # if present, transcribe before processing
-    is_dm: bool = True    # vs group/channel
-    raw: object = None    # original event for adapters that need it
+    platform: str  # "telegram" | "discord" | "slack" | "email" | "imessage" | "signal" | "matrix"
+    user_id: str  # platform-specific stable ID
+    user_handle: str  # display name / handle
+    chat_id: str  # platform-specific channel/DM id
+    text: str  # message body
+    voice_bytes: bytes | None = None  # if present, transcribe before processing
+    is_dm: bool = True  # vs group/channel
+    raw: object = None  # original event for adapters that need it
 
 
 @dataclass
 class Reply:
     """Outbound reply produced by the bot."""
+
     text: str
-    media_paths: list[str] = None   # optional file attachments
+    media_paths: list[str] = None  # optional file attachments
 
 
 # A handler the gateway calls for each inbound message; returns a Reply.
@@ -53,5 +55,6 @@ class Gateway(Protocol):
     """Each gateway implements start/stop. They run as background asyncio tasks."""
 
     name: str
+
     async def start(self, handler: Handler) -> None: ...
     async def stop(self) -> None: ...

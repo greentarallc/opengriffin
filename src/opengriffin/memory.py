@@ -81,6 +81,7 @@ def add_entry(target: Target, content: str) -> tuple[bool, str]:
     if not content:
         return False, "empty entry"
     from redact import looks_like_injection
+
     if looks_like_injection(content):
         return False, "rejected: entry matches a prompt-injection pattern"
     with _lock:
@@ -138,7 +139,10 @@ def remove_entry(target: Target, find: str) -> tuple[bool, str]:
             return False, f"no entry contained: {find[:80]}"
         _write(target, _join(kept))
         joined = _join(kept)
-        return True, f"removed {len(entries) - len(kept)}; {target} now {len(joined)}/{_cap(target)} chars"
+        return (
+            True,
+            f"removed {len(entries) - len(kept)}; {target} now {len(joined)}/{_cap(target)} chars",
+        )
 
 
 def read_soul() -> str:
@@ -210,7 +214,10 @@ def render_system_block() -> str:
 async def _memory_add(args: dict) -> dict:
     target = args["target"]
     if target not in ("memory", "user"):
-        return {"content": [{"type": "text", "text": "target must be 'memory' or 'user'"}], "is_error": True}
+        return {
+            "content": [{"type": "text", "text": "target must be 'memory' or 'user'"}],
+            "is_error": True,
+        }
     ok, msg = add_entry(target, args["content"])
     return {"content": [{"type": "text", "text": msg}], "is_error": not ok}
 
@@ -227,7 +234,10 @@ async def _memory_add(args: dict) -> dict:
 async def _memory_replace(args: dict) -> dict:
     target = args["target"]
     if target not in ("memory", "user"):
-        return {"content": [{"type": "text", "text": "target must be 'memory' or 'user'"}], "is_error": True}
+        return {
+            "content": [{"type": "text", "text": "target must be 'memory' or 'user'"}],
+            "is_error": True,
+        }
     ok, msg = replace_entry(target, args["find"], args["replace"])
     return {"content": [{"type": "text", "text": msg}], "is_error": not ok}
 
@@ -243,7 +253,10 @@ async def _memory_replace(args: dict) -> dict:
 async def _memory_remove(args: dict) -> dict:
     target = args["target"]
     if target not in ("memory", "user"):
-        return {"content": [{"type": "text", "text": "target must be 'memory' or 'user'"}], "is_error": True}
+        return {
+            "content": [{"type": "text", "text": "target must be 'memory' or 'user'"}],
+            "is_error": True,
+        }
     ok, msg = remove_entry(target, args["find"])
     return {"content": [{"type": "text", "text": msg}], "is_error": not ok}
 

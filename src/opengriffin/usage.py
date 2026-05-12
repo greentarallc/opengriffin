@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 LOG_FILE = Path(__file__).resolve().parent / "usage.jsonl"
 
@@ -22,7 +22,7 @@ def record(
     cost_usd: float | None,
     input_tokens: int | None,
     output_tokens: int | None,
-    extra: Optional[dict[str, Any]] = None,
+    extra: dict[str, Any] | None = None,
 ) -> None:
     entry = {
         "ts": dt.datetime.now().isoformat(timespec="seconds"),
@@ -145,7 +145,5 @@ def summary() -> str:
         cost = sum((r.get("cost_usd") or 0) for r in rows)
         ti = sum((r.get("input_tokens") or 0) for r in rows)
         to_ = sum((r.get("output_tokens") or 0) for r in rows)
-        lines.append(
-            f"_{label}_: {len(rows)} runs · ${cost:.2f} · {ti:,} in / {to_:,} out"
-        )
+        lines.append(f"_{label}_: {len(rows)} runs · ${cost:.2f} · {ti:,} in / {to_:,} out")
     return "\n".join(lines)

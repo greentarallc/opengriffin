@@ -20,7 +20,6 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -62,9 +61,21 @@ def _user_messages_with_time(days: int = 30) -> list[tuple[dt.datetime, str]]:
                 if msg.get("role") != "user":
                     continue
                 content = msg.get("content")
-                text = content if isinstance(content, str) else (
-                    next((c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"), "")
-                    if isinstance(content, list) else ""
+                text = (
+                    content
+                    if isinstance(content, str)
+                    else (
+                        next(
+                            (
+                                c.get("text", "")
+                                for c in content
+                                if isinstance(c, dict) and c.get("type") == "text"
+                            ),
+                            "",
+                        )
+                        if isinstance(content, list)
+                        else ""
+                    )
                 )
                 if text:
                     out.append((mtime, text[:300]))
@@ -92,20 +103,38 @@ def detect_patterns() -> list[dict]:
     patterns = []
     for (weekday, hour, topic), n in bucket.items():
         if n >= 3:
-            patterns.append({
-                "weekday": weekday,           # 0=Monday
-                "hour": hour,
-                "topic": topic,
-                "occurrences": n,
-                "confidence": min(1.0, n / 10),
-                "detected_at": dt.datetime.now().isoformat(timespec="seconds"),
-            })
+            patterns.append(
+                {
+                    "weekday": weekday,  # 0=Monday
+                    "hour": hour,
+                    "topic": topic,
+                    "occurrences": n,
+                    "confidence": min(1.0, n / 10),
+                    "detected_at": dt.datetime.now().isoformat(timespec="seconds"),
+                }
+            )
     patterns.sort(key=lambda p: -p["confidence"])
     _save_patterns({"patterns": patterns})
     return patterns
 
 
-_NOISE = {"the", "a", "an", "is", "to", "i", "you", "me", "my", "of", "and", "in", "on", "for", "with"}
+_NOISE = {
+    "the",
+    "a",
+    "an",
+    "is",
+    "to",
+    "i",
+    "you",
+    "me",
+    "my",
+    "of",
+    "and",
+    "in",
+    "on",
+    "for",
+    "with",
+}
 
 
 def _normalize_topic(text: str) -> str:
@@ -128,6 +157,7 @@ async def precompute_due() -> dict:
     """Run every 5 minutes. For any pattern that fires within the next 15
     minutes, pre-compute the answer and cache it."""
     from . import bot as bot_module
+
     now = dt.datetime.now()
     upcoming = []
     for p in _load_patterns().get("patterns", []):
@@ -141,9 +171,14 @@ async def precompute_due() -> dict:
     for p in upcoming:
         cache_key = f"{p['weekday']}_{p['hour']}_{re.sub(r'[^a-z]', '_', p['topic'])}.md"
         cache_path = PRED_DIR / cache_key
-        if cache_path.is_file() and (now - dt.datetime.fromtimestamp(cache_path.stat().st_mtime)).total_seconds() < 3600:
+        if (
+            cache_path.is_file()
+            and (now - dt.datetime.fromtimestamp(cache_path.stat().st_mtime)).total_seconds() < 3600
+        ):
             continue  # already fresh
-        prompt = f"Pre-compute a brief answer the user is likely to ask about: {p['topic']}. Be concise."
+        prompt = (
+            f"Pre-compute a brief answer the user is likely to ask about: {p['topic']}. Be concise."
+        )
         try:
             answer = await bot_module.ask_claude_with_progress(0, prompt, None, status_msg_id=None)
             cache_path.write_text(answer)
@@ -164,7 +199,9 @@ def lookup_cached(text: str) -> str | None:
             cache_key = f"{p['weekday']}_{p['hour']}_{re.sub(r'[^a-z]', '_', p['topic'])}.md"
             cache_path = PRED_DIR / cache_key
             if cache_path.is_file():
-                age = (dt.datetime.now() - dt.datetime.fromtimestamp(cache_path.stat().st_mtime)).total_seconds()
+                age = (
+                    dt.datetime.now() - dt.datetime.fromtimestamp(cache_path.stat().st_mtime)
+                ).total_seconds()
                 if age < 7200:  # 2h freshness
                     return cache_path.read_text()
     return None
@@ -177,10 +214,18 @@ def lookup_cached(text: str) -> str | None:
 )
 async def _detect(args: dict) -> dict:
     patterns = detect_patterns()
-    return {"content": [{"type": "text", "text": f"detected {len(patterns)} patterns:\n" + "\n".join(
-        f"  weekday={p['weekday']} hour={p['hour']} {p['topic']} (×{p['occurrences']}, conf {p['confidence']:.2f})"
-        for p in patterns[:10]
-    )}]}
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": f"detected {len(patterns)} patterns:\n"
+                + "\n".join(
+                    f"  weekday={p['weekday']} hour={p['hour']} {p['topic']} (×{p['occurrences']}, conf {p['confidence']:.2f})"
+                    for p in patterns[:10]
+                ),
+            }
+        ]
+    }
 
 
 @tool(

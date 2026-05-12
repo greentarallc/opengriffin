@@ -14,9 +14,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
-from . import Gateway, Handler, Message, Reply
+from . import Handler, Message
 
 log = logging.getLogger("opengriffin.gateways.discord")
 
@@ -36,13 +35,14 @@ class DiscordGateway:
         self._allowed: set[int] = {
             int(x) for x in raw.replace(",", " ").split() if x.strip().isdigit()
         }
-        self._client: Optional[object] = None
+        self._client: object | None = None
 
     def _authorized(self, user_id: int) -> bool:
         return not self._allowed or user_id in self._allowed
 
     async def start(self, handler: Handler) -> None:
         import discord
+
         intents = discord.Intents.default()
         intents.message_content = True
         intents.dm_messages = True
@@ -78,7 +78,7 @@ class DiscordGateway:
                 return
             # Discord max msg length 2000
             for i in range(0, len(reply.text), 1900):
-                await msg.channel.send(reply.text[i:i + 1900])
+                await msg.channel.send(reply.text[i : i + 1900])
             for path in reply.media_paths or []:
                 try:
                     await msg.channel.send(file=discord.File(path))

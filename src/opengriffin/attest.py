@@ -47,11 +47,12 @@ def _ensure_software_key() -> None:
     if SOFTWARE_KEY.is_file():
         return
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
         from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     except ImportError:
         # Last-resort: random 32 bytes for HMAC
         import secrets
+
         SOFTWARE_KEY.write_bytes(secrets.token_bytes(32))
         SOFTWARE_KEY.chmod(0o600)
         return
@@ -74,37 +75,46 @@ def sign(payload: bytes) -> dict:
         _ensure_software_key()
         try:
             from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
             pk = serialization.load_pem_private_key(SOFTWARE_KEY.read_bytes(), password=None)
             sig = pk.sign(payload).hex()
         except Exception:
             import hmac
+
             sig = hmac.new(SOFTWARE_KEY.read_bytes(), payload, hashlib.sha256).hexdigest()
     elif backend == "macos-keychain":
         # Use security CLI to sign with a key labeled 'opengriffin-attest'
         try:
             subprocess.run(
                 ["security", "find-key", "-l", "opengriffin-attest"],
-                check=True, capture_output=True,
+                check=True,
+                capture_output=True,
             )
         except subprocess.CalledProcessError:
             # Create the key on first use (RSA via security; SE-backed needs pyobjc)
             subprocess.run(
                 ["security", "create-keypair", "-l", "opengriffin-attest"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
             )
         try:
             r = subprocess.run(
                 ["security", "sign", "-k", "opengriffin-attest"],
-                input=payload, capture_output=True, check=True,
+                input=payload,
+                capture_output=True,
+                check=True,
             )
             sig = r.stdout.hex()
         except subprocess.CalledProcessError:
             sig = "(unavailable)"
     elif backend == "linux-tpm2":
         try:
-            r = subprocess.run(["tpm2_sign", "-c", "/etc/tpm2/opengriffin.ctx"],
-                               input=payload, capture_output=True, check=True)
+            r = subprocess.run(
+                ["tpm2_sign", "-c", "/etc/tpm2/opengriffin.ctx"],
+                input=payload,
+                capture_output=True,
+                check=True,
+            )
             sig = r.stdout.hex()
         except Exception:
             sig = "(unavailable)"
@@ -130,7 +140,9 @@ def attest(action_kind: str, payload: dict | str) -> dict:
     "attest",
     "Hardware-attested signing of a consequential action. Produces a digest + signature stored in tamper-evident audit log. Use BEFORE the action runs; pair with capability tokens for full auditability.",
     {
-        "action_kind": Annotated[str, "Type of action (e.g. 'payment', 'send_email', 'github_push')"],
+        "action_kind": Annotated[
+            str, "Type of action (e.g. 'payment', 'send_email', 'github_push')"
+        ],
         "payload_json": Annotated[str, "JSON payload describing the action"],
     },
 )
@@ -148,9 +160,12 @@ async def _attest(args: dict) -> dict:
 async def _audit(args: dict) -> dict:
     if not ATTEST_LOG.is_file():
         return {"content": [{"type": "text", "text": "(no attestations yet)"}]}
-    lines = ATTEST_LOG.read_text().splitlines()[-int(args.get("n") or 20):]
+    lines = ATTEST_LOG.read_text().splitlines()[-int(args.get("n") or 20) :]
     out = [json.loads(line) for line in lines if line.strip()]
-    text = "\n".join(f"[{r.get('ts')}] {r.get('action_kind')} | digest={r.get('digest','')[:16]}… | backend={r.get('backend')}" for r in out)
+    text = "\n".join(
+        f"[{r.get('ts')}] {r.get('action_kind')} | digest={r.get('digest', '')[:16]}… | backend={r.get('backend')}"
+        for r in out
+    )
     return {"content": [{"type": "text", "text": text}]}
 
 

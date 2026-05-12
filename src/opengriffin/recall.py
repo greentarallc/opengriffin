@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -66,7 +65,9 @@ def _extract_text(msg: dict) -> tuple[str, str]:
                 if c.get("type") == "text":
                     parts.append(c.get("text", ""))
                 elif c.get("type") == "tool_use":
-                    parts.append(f"[tool_use:{c.get('name', '?')} {json.dumps(c.get('input', {}))[:200]}]")
+                    parts.append(
+                        f"[tool_use:{c.get('name', '?')} {json.dumps(c.get('input', {}))[:200]}]"
+                    )
                 elif c.get("type") == "tool_result":
                     inner = c.get("content")
                     if isinstance(inner, list):
@@ -79,7 +80,7 @@ def _extract_text(msg: dict) -> tuple[str, str]:
     return role, ""
 
 
-def search(query: str, *, project: Optional[str] = None, since_days: int = 30) -> list[SearchHit]:
+def search(query: str, *, project: str | None = None, since_days: int = 30) -> list[SearchHit]:
     """Substring (case-insensitive) search across session JSONL files."""
     if not query.strip():
         return []
@@ -137,9 +138,7 @@ def render(hits: list[SearchHit]) -> str:
     lines = []
     for h in hits:
         ts = h.mtime.strftime("%Y-%m-%d %H:%M")
-        lines.append(
-            f"`{h.session_id[:8]}` ({ts}, {h.role})\n  {h.snippet[:300]}…"
-        )
+        lines.append(f"`{h.session_id[:8]}` ({ts}, {h.role})\n  {h.snippet[:300]}…")
     return "\n\n".join(lines)
 
 
@@ -151,7 +150,7 @@ def render(hits: list[SearchHit]) -> str:
     "Search past Claude sessions stored on disk for a substring. Returns session ids, timestamps, and snippets. Use this when the user references a prior conversation ('what did we discuss yesterday about X?', 'remember when I asked Y?').",
     {
         "query": Annotated[str, "Substring to search for (case-insensitive)"],
-        "since_days": Annotated[Optional[int], "Look back this many days (default 30)"],
+        "since_days": Annotated[int | None, "Look back this many days (default 30)"],
     },
 )
 async def _session_search(args: dict) -> dict:

@@ -15,7 +15,6 @@ Hard prompts come back as 3 even if they look short ("solve P=NP" is short).
 
 from __future__ import annotations
 
-import re
 from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
@@ -23,7 +22,12 @@ from claude_agent_sdk import create_sdk_mcp_server, tool
 # Tier → ordered fallback chain (provider, model)
 TIER_CHAINS = {
     0: [("groq", "llama-3.3-70b-versatile"), ("cerebras", "llama-3.3-70b"), ("ollama", "llama3.1")],
-    1: [("openai", "gpt-4o-mini"), ("anthropic", "claude-haiku-4-5"), ("deepseek", "deepseek-chat"), ("gemini", "gemini-1.5-flash")],
+    1: [
+        ("openai", "gpt-4o-mini"),
+        ("anthropic", "claude-haiku-4-5"),
+        ("deepseek", "deepseek-chat"),
+        ("gemini", "gemini-1.5-flash"),
+    ],
     2: [("anthropic", "claude-sonnet-4-6"), ("openai", "gpt-4o"), ("gemini", "gemini-1.5-pro")],
     3: [("anthropic", "claude-opus-4-7"), ("openai", "o1"), ("deepseek", "deepseek-reasoner")],
 }
@@ -36,10 +40,21 @@ def classify(prompt: str) -> tuple[int, str]:
 
     # Hard signals
     hard_kws = [
-        "prove", "derive", "formal proof", "complexity class", "design a system",
-        "architect", "research paper", "analyze the trade-offs", "phd",
-        "olympiad", "imo", "aime", "competitive programming",
-        "explain step-by-step the math", "rigorously",
+        "prove",
+        "derive",
+        "formal proof",
+        "complexity class",
+        "design a system",
+        "architect",
+        "research paper",
+        "analyze the trade-offs",
+        "phd",
+        "olympiad",
+        "imo",
+        "aime",
+        "competitive programming",
+        "explain step-by-step the math",
+        "rigorously",
     ]
     if any(k in p for k in hard_kws):
         return 3, "hard keyword present"

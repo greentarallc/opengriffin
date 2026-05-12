@@ -22,7 +22,7 @@ import logging
 import re
 import unicodedata
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 from urllib.parse import urlparse
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
@@ -37,7 +37,10 @@ ALLOWLIST_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
 PROMPT_INJECTION_PATTERNS = [
-    re.compile(r"ignore (?:all |the |your )?(?:previous|prior|above) (?:instructions|prompts)", re.IGNORECASE),
+    re.compile(
+        r"ignore (?:all |the |your )?(?:previous|prior|above) (?:instructions|prompts)",
+        re.IGNORECASE,
+    ),
     re.compile(r"disregard (?:all |the |prior|earlier|above)", re.IGNORECASE),
     re.compile(r"</?(?:system|user|assistant)>", re.IGNORECASE),
     re.compile(r"<\|im_(?:start|end|sep)\|>", re.IGNORECASE),
@@ -72,6 +75,7 @@ HARDCODED_SECRETS = [
     re.compile(r"\d{8,12}:AA[A-Za-z0-9_\-]{32,}"),  # Telegram bot token
 ]
 
+
 # Suspiciously high entropy in URL params (potential exfiltration via querystring)
 def _looks_exfiltration_url(url: str) -> bool:
     try:
@@ -87,7 +91,7 @@ def _looks_exfiltration_url(url: str) -> bool:
     return any(re.fullmatch(r"[A-Za-z0-9+/=_-]{200,}", c) for c in long_chunks)
 
 
-def _has_homograph(text: str) -> Optional[str]:
+def _has_homograph(text: str) -> str | None:
     """Return the offending char if any non-ASCII Unicode confusable found in URL/command."""
     for ch in text:
         if ord(ch) > 127:
@@ -106,17 +110,28 @@ def _has_homograph(text: str) -> Optional[str]:
 def _load_allowlist() -> dict:
     if not ALLOWLIST_FILE.is_file():
         # Sensible defaults
-        return {"hosts": [
-            "api.anthropic.com", "api.openai.com", "generativelanguage.googleapis.com",
-            "api.github.com", "raw.githubusercontent.com", "github.com",
-            "api.telegram.org",
-            "huggingface.co", "api-inference.huggingface.co",
-            "duckduckgo.com", "html.duckduckgo.com",
-            "wikipedia.org", "en.wikipedia.org",
-            "pypi.org", "files.pythonhosted.org",
-            "registry.npmjs.org",
-            "127.0.0.1", "localhost",
-        ]}
+        return {
+            "hosts": [
+                "api.anthropic.com",
+                "api.openai.com",
+                "generativelanguage.googleapis.com",
+                "api.github.com",
+                "raw.githubusercontent.com",
+                "github.com",
+                "api.telegram.org",
+                "huggingface.co",
+                "api-inference.huggingface.co",
+                "duckduckgo.com",
+                "html.duckduckgo.com",
+                "wikipedia.org",
+                "en.wikipedia.org",
+                "pypi.org",
+                "files.pythonhosted.org",
+                "registry.npmjs.org",
+                "127.0.0.1",
+                "localhost",
+            ]
+        }
     try:
         return json.loads(ALLOWLIST_FILE.read_text())
     except Exception:
@@ -183,7 +198,10 @@ def scan(action_text: str) -> dict:
 )
 async def _scan(args: dict) -> dict:
     result = scan(args["action_text"])
-    return {"content": [{"type": "text", "text": json.dumps(result, indent=2)}], "is_error": result["severity"] == "block"}
+    return {
+        "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
+        "is_error": result["severity"] == "block",
+    }
 
 
 @tool(

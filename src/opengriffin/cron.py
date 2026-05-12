@@ -8,7 +8,6 @@ files are sent as Telegram media after the text.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
@@ -16,7 +15,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -25,7 +23,6 @@ from claude_agent_sdk import (
     ClaudeAgentOptions,
     ClaudeSDKClient,
     ResultMessage,
-    SystemMessage,
     TextBlock,
 )
 from telegram import Bot
@@ -55,7 +52,7 @@ class Job:
     deliver_to: str
     prompt: str
     enabled: bool = True
-    pre_script: Optional[str] = None
+    pre_script: str | None = None
 
 
 def load_jobs() -> list[Job]:
@@ -193,9 +190,13 @@ async def run_job(job: Job, bot: Bot) -> None:
             output = _run_pre_script(job.pre_script)
         except Exception as e:
             log.exception("pre_script failed for %s", job.id)
-            await bot.send_message(chat_id=job.deliver_to, text=f"[{job.name}] pre-script error: {e}")
+            await bot.send_message(
+                chat_id=job.deliver_to, text=f"[{job.name}] pre-script error: {e}"
+            )
             return
-        prompt = f"=== Pre-run script output ===\n{output}\n=== End script output ===\n\n{job.prompt}"
+        prompt = (
+            f"=== Pre-run script output ===\n{output}\n=== End script output ===\n\n{job.prompt}"
+        )
 
     try:
         result = await _run_claude(prompt, job_id=job.id)

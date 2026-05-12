@@ -7,7 +7,7 @@ Telegram Bot, scheduler, etc. through every function signature.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 
 @dataclass
 class BotContext:
-    bot: Optional["Bot"] = None
-    app: Optional["Application"] = None
-    scheduler: Optional["AsyncIOScheduler"] = None
+    bot: Bot | None = None
+    app: Application | None = None
+    scheduler: AsyncIOScheduler | None = None
     allowed_users: set[int] = field(default_factory=set)
-    home_chat_id: Optional[str] = None
+    home_chat_id: str | None = None
 
 
 CTX = BotContext()

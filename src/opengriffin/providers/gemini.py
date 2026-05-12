@@ -22,6 +22,7 @@ class GeminiProvider:
         if not key:
             raise RuntimeError("GEMINI_API_KEY not set")
         import google.generativeai as genai
+
         genai.configure(api_key=key)
         self.model = model or os.environ.get("OPENGRIFFIN_MODEL", "gemini-2.0-flash-exp")
         self._client = genai.GenerativeModel(self.model)
@@ -34,6 +35,7 @@ class GeminiProvider:
             contents.append({"role": role, "parts": [m["content"]]})
         # Gemini SDK is sync; run in thread
         import asyncio
+
         resp = await asyncio.to_thread(self._client.generate_content, contents)
         text = resp.text if hasattr(resp, "text") else str(resp)
         usage = getattr(resp, "usage_metadata", None)

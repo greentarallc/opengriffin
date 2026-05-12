@@ -14,7 +14,10 @@ _SECRET_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"github_pat_[A-Za-z0-9_]{60,}"), "<REDACTED:github_pat>"),
     (re.compile(r"xox[abops]-[A-Za-z0-9-]{20,}"), "<REDACTED:slack_token>"),
     (re.compile(r"\d{8,12}:AA[A-Za-z0-9_\-]{32,}"), "<REDACTED:telegram_bot_token>"),
-    (re.compile(r"-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]+?-----END [A-Z ]+PRIVATE KEY-----"), "<REDACTED:private_key>"),
+    (
+        re.compile(r"-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]+?-----END [A-Z ]+PRIVATE KEY-----"),
+        "<REDACTED:private_key>",
+    ),
 ]
 
 
@@ -42,7 +45,4 @@ _INJECTION_PATTERNS = [
 
 
 def looks_like_injection(text: str) -> bool:
-    for pat in _INJECTION_PATTERNS:
-        if pat.search(text):
-            return True
-    return False
+    return any(pat.search(text) for pat in _INJECTION_PATTERNS)

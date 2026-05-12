@@ -19,6 +19,7 @@ class CohereProvider:
         if not key:
             raise RuntimeError("COHERE_API_KEY not set")
         import cohere
+
         self._client = cohere.AsyncClientV2(api_key=key)
         self.model = model or os.environ.get("OPENGRIFFIN_MODEL", "command-r-plus-08-2024")
 

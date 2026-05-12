@@ -10,6 +10,7 @@ conversation.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import json
 import os
@@ -26,7 +27,9 @@ _lock = threading.Lock()
 class TopicState:
     active: str = "default"
     sessions: dict[str, str] = field(default_factory=dict)  # topic_name -> session_id
-    archive: list[dict] = field(default_factory=list)  # past sessions: {topic, session_id, archived_at}
+    archive: list[dict] = field(
+        default_factory=list
+    )  # past sessions: {topic, session_id, archived_at}
 
 
 _chats: dict[int, TopicState] = {}
@@ -78,10 +81,8 @@ def _flush() -> None:
             json.dump(_serialize(), fh, indent=2)
         os.replace(tmp_path, STORE_FILE)
     except Exception:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(tmp_path)
-        except OSError:
-            pass
         raise
 
 
@@ -144,11 +145,13 @@ def reset(chat_id: int, topic: str | None = None, *, archive: bool = True) -> st
             topic = s.active
         prior = s.sessions.pop(topic, None)
         if prior and archive:
-            s.archive.append({
-                "topic": topic,
-                "session_id": prior,
-                "archived_at": dt.datetime.now().isoformat(timespec="seconds"),
-            })
+            s.archive.append(
+                {
+                    "topic": topic,
+                    "session_id": prior,
+                    "archived_at": dt.datetime.now().isoformat(timespec="seconds"),
+                }
+            )
             # Keep the archive bounded
             s.archive = s.archive[-100:]
         _flush()

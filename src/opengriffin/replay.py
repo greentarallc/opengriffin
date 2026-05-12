@@ -18,11 +18,16 @@ import datetime as dt
 import json
 import logging
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import (
-    AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient,
-    ResultMessage, TextBlock, create_sdk_mcp_server, tool,
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    ResultMessage,
+    TextBlock,
+    create_sdk_mcp_server,
+    tool,
 )
 
 log = logging.getLogger("opengriffin.replay")
@@ -54,8 +59,9 @@ def _user_messages(session_id: str) -> list[str]:
     return out
 
 
-async def replay(session_id: str, *, soul_text: Optional[str] = None,
-                 model: Optional[str] = None) -> dict:
+async def replay(
+    session_id: str, *, soul_text: str | None = None, model: str | None = None
+) -> dict:
     """Replay user messages from session_id with overrides; return new transcript."""
     msgs = _user_messages(session_id)
     if not msgs:
@@ -105,12 +111,14 @@ async def replay(session_id: str, *, soul_text: Optional[str] = None,
     "Re-run a past session with a different model or SOUL. Returns the new transcript so you can diff it against the original.",
     {
         "session_id": Annotated[str, "Original session id"],
-        "soul_text": Annotated[Optional[str], "Override SOUL text"],
-        "model": Annotated[Optional[str], "Override model id"],
+        "soul_text": Annotated[str | None, "Override SOUL text"],
+        "model": Annotated[str | None, "Override model id"],
     },
 )
 async def _replay(args: dict) -> dict:
-    result = await replay(args["session_id"], soul_text=args.get("soul_text"), model=args.get("model"))
+    result = await replay(
+        args["session_id"], soul_text=args.get("soul_text"), model=args.get("model")
+    )
     if not result.get("ok"):
         return {"content": [{"type": "text", "text": str(result)}], "is_error": True}
     out = []

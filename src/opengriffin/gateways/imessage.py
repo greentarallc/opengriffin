@@ -19,10 +19,9 @@ import logging
 import os
 import sqlite3
 import subprocess
-import time
 from pathlib import Path
 
-from . import Gateway, Handler, Message, Reply
+from . import Handler, Message
 
 log = logging.getLogger("opengriffin.gateways.imessage")
 
@@ -35,7 +34,11 @@ class IMessageGateway:
         self._allowed = {x.strip() for x in raw.split(",") if x.strip()}
         if not self._allowed:
             raise RuntimeError("IMESSAGE_ALLOWED_HANDLES must list at least one handle")
-        self._db = Path(os.environ.get("IMESSAGE_DB_PATH", str(Path.home() / "Library" / "Messages" / "chat.db")))
+        self._db = Path(
+            os.environ.get(
+                "IMESSAGE_DB_PATH", str(Path.home() / "Library" / "Messages" / "chat.db")
+            )
+        )
         if not self._db.is_file():
             raise RuntimeError(f"chat.db not found at {self._db}; grant Full Disk Access?")
         self._last_rowid = 0
@@ -69,7 +72,7 @@ class IMessageGateway:
                 """,
                 (self._last_rowid,),
             )
-            for rowid, text, is_from_me, handle in cur.fetchall():
+            for rowid, text, _is_from_me, handle in cur.fetchall():
                 self._last_rowid = rowid
                 if handle not in self._allowed:
                     continue

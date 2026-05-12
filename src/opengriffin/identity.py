@@ -29,7 +29,7 @@ import datetime as dt
 import json
 import secrets
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -75,7 +75,7 @@ def link_platform(handle: str, platform: str, platform_id: str) -> bool:
     return True
 
 
-def lookup_account(platform: str, platform_id: str) -> Optional[str]:
+def lookup_account(platform: str, platform_id: str) -> str | None:
     data = _load()
     for handle, acc in data["accounts"].items():
         if acc.get("platforms", {}).get(platform) == str(platform_id):
@@ -97,7 +97,7 @@ def issue_link_code(handle: str, ttl_seconds: int = 600) -> str:
     return code
 
 
-def consume_link_code(code: str, platform: str, platform_id: str) -> Optional[str]:
+def consume_link_code(code: str, platform: str, platform_id: str) -> str | None:
     """Called when a code arrives via a different platform. Returns handle if linked."""
     entry = _PENDING_LINKS.pop(code.upper(), None)
     if entry is None:
@@ -129,7 +129,14 @@ async def _create(args: dict) -> dict:
 )
 async def _link_code(args: dict) -> dict:
     code = issue_link_code(args["handle"])
-    return {"content": [{"type": "text", "text": f"Link code: *{code}*\nValid 10 min. Send it from the platform you want to link."}]}
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": f"Link code: *{code}*\nValid 10 min. Send it from the platform you want to link.",
+            }
+        ]
+    }
 
 
 @tool(

@@ -11,11 +11,11 @@ checkpoints, approvals, tools, kanban, webhooks and voice are wired in.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import time
 from pathlib import Path
-from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -33,7 +33,6 @@ from telegram import Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.ext import (
     Application,
-    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -56,7 +55,6 @@ from . import usage as usage_module
 from . import voice as voice_module
 from . import webhooks as webhooks_module
 from .redact import redact
-
 
 # Look for .env in: CWD, ~/.config/opengriffin/, or wherever OPENGRIFFIN_HOME points.
 for _p in (
@@ -100,48 +98,70 @@ def build_mcp_servers() -> dict:
     # Killer features (12)
     try:
         from . import skill_hub
+
         servers["skill_hub"] = skill_hub.SKILL_HUB_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import echo_memory
+
         servers["echo_memory"] = echo_memory.ECHO_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import triggers as _triggers
+
         servers["triggers"] = _triggers.TRIGGERS_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import pods
+
         servers["pods"] = pods.PODS_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import wallet
+
         servers["wallet"] = wallet.WALLET_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import soul_sync
+
         servers["soul_sync"] = soul_sync.SOUL_SYNC_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import routing
+
         servers["routing"] = routing.ROUTING_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import drift
+
         servers["drift"] = drift.DRIFT_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import self_healing
+
         servers["self_healing"] = self_healing.HEAL_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import skill_strategy
+
         servers["skill_strategy"] = skill_strategy.STRATEGY_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     try:
         from . import reputation
+
         servers["reputation"] = reputation.REPUTATION_SERVER
-    except Exception: pass
+    except Exception:
+        pass
     # Playwright via npx — only register if npm is available; the SDK will
     # handle launch errors gracefully if the package can't be downloaded.
     if os.environ.get("CLAUDE_BOT_DISABLE_PLAYWRIGHT") != "1":
@@ -153,7 +173,7 @@ def build_mcp_servers() -> dict:
     return servers
 
 
-def build_options(session_id: Optional[str], chat_id: Optional[int] = None) -> ClaudeAgentOptions:
+def build_options(session_id: str | None, chat_id: int | None = None) -> ClaudeAgentOptions:
     chat_extra = aliases_module.get_chat_sysprompt(chat_id) if chat_id else ""
     append_prompt = (
         "You are talking to the user over Telegram. Keep replies concise "
@@ -188,22 +208,18 @@ async def _heartbeat(state: progress_module.RunState, bot) -> None:
     """Keep typing indicator alive and edit the status message periodically."""
     last_edit = 0.0
     while not state.finished:
-        try:
+        with contextlib.suppress(Exception):
             await bot.send_chat_action(chat_id=state.chat_id, action=ChatAction.TYPING)
-        except Exception:
-            pass
         now = time.monotonic()
         if state.status_msg_id and (now - last_edit) >= progress_module.STATUS_EDIT_INTERVAL_SEC:
             last_edit = now
-            try:
+            with contextlib.suppress(Exception):
                 await bot.edit_message_text(
                     chat_id=state.chat_id,
                     message_id=state.status_msg_id,
                     text=state.status_text(),
                     parse_mode=ParseMode.MARKDOWN,
                 )
-            except Exception:
-                pass
         try:
             await asyncio.sleep(progress_module.TYPING_INTERVAL_SEC)
         except asyncio.CancelledError:
@@ -244,18 +260,32 @@ def _summarize_tool_input(tool_name: str, tool_input: dict) -> str:
         todos = ti.get("todos") or []
         return f"{len(todos)} items"
     # MCP tools: pick a likely-useful field, otherwise show first ~80 chars
-    for k in ("query", "name", "id", "target", "content", "find", "url", "path", "schedule", "title"):
+    for k in (
+        "query",
+        "name",
+        "id",
+        "target",
+        "content",
+        "find",
+        "url",
+        "path",
+        "schedule",
+        "title",
+    ):
         if k in ti and isinstance(ti[k], str):
             return f"{k}={ti[k]}"
     # Fallback: stringify input
     try:
         import json as _json
+
         return _json.dumps(ti, ensure_ascii=False)
     except Exception:
         return str(ti)
 
 
-async def _stream_claude(state: progress_module.RunState, prompt: str) -> tuple[str, Optional[str], Optional[float], Optional[int], Optional[int]]:
+async def _stream_claude(
+    state: progress_module.RunState, prompt: str
+) -> tuple[str, str | None, float | None, int | None, int | None]:
     """Run the Claude SDK call, updating `state` as messages arrive.
 
     Returns (concatenated_text, session_id, cost_usd, input_tokens, output_tokens).
@@ -264,7 +294,7 @@ async def _stream_claude(state: progress_module.RunState, prompt: str) -> tuple[
     sid = topics_module.session_id_for(state.chat_id) or None
     options = build_options(sid, chat_id=state.chat_id)
     chunks: list[str] = []
-    last_session: Optional[str] = None
+    last_session: str | None = None
     cost = None
     in_tok = out_tok = None
 
@@ -275,10 +305,8 @@ async def _stream_claude(state: progress_module.RunState, prompt: str) -> tuple[
             nonlocal last_session, cost, in_tok, out_tok
             async for msg in client.receive_response():
                 if state.cancel_event.is_set():
-                    try:
+                    with contextlib.suppress(Exception):
                         await client.interrupt()
-                    except Exception:
-                        pass
                     raise asyncio.CancelledError("user-cancelled")
                 if isinstance(msg, AssistantMessage):
                     for block in msg.content:
@@ -297,17 +325,13 @@ async def _stream_claude(state: progress_module.RunState, prompt: str) -> tuple[
                     if new_sid:
                         last_session = new_sid
                         # Persist immediately so a hang or crash doesn't lose recall.
-                        try:
+                        with contextlib.suppress(Exception):
                             topics_module.set_session_id(state.chat_id, new_sid)
-                        except Exception:
-                            pass
                 elif isinstance(msg, ResultMessage):
                     if msg.session_id:
                         last_session = msg.session_id
-                        try:
+                        with contextlib.suppress(Exception):
                             topics_module.set_session_id(state.chat_id, msg.session_id)
-                        except Exception:
-                            pass
                     cost = getattr(msg, "total_cost_usd", None)
                     u = getattr(msg, "usage", None)
                     if isinstance(u, dict):
@@ -323,7 +347,7 @@ async def ask_claude_with_progress(
     chat_id: int,
     prompt: str,
     bot,
-    status_msg_id: Optional[int],
+    status_msg_id: int | None,
 ) -> str:
     """Run Claude with timeout, heartbeat, and cancellation.
 
@@ -351,12 +375,10 @@ async def ask_claude_with_progress(
     finally:
         progress_module.end(chat_id)
         hb.cancel()
-        try:
+        # CancelledError inherits from BaseException in 3.11+ and would
+        # otherwise leak out and look like the user cancelled the run.
+        with contextlib.suppress(asyncio.CancelledError, Exception):
             await hb
-        except (asyncio.CancelledError, Exception):
-            # CancelledError inherits from BaseException in 3.11+ and would
-            # otherwise leak out and look like the user cancelled the run.
-            pass
 
 
 # ---------- helpers ----------
@@ -411,18 +433,25 @@ async def cmd_reset(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
     chat_id = update.effective_chat.id
     topics_module.reset(chat_id)
-    await update.effective_message.reply_text(f"Topic '{topics_module.active_topic(chat_id)}' reset.")
+    await update.effective_message.reply_text(
+        f"Topic '{topics_module.active_topic(chat_id)}' reset."
+    )
 
 
 async def cmd_topic(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if not _authorized(update):
         return
     if not ctx.args:
-        await update.effective_message.reply_text(f"current topic: `{topics_module.active_topic(update.effective_chat.id)}`", parse_mode=ParseMode.MARKDOWN)
+        await update.effective_message.reply_text(
+            f"current topic: `{topics_module.active_topic(update.effective_chat.id)}`",
+            parse_mode=ParseMode.MARKDOWN,
+        )
         return
     name = ctx.args[0].strip().lower()
     topics_module.switch(update.effective_chat.id, name)
-    await update.effective_message.reply_text(f"switched to topic: `{name}`", parse_mode=ParseMode.MARKDOWN)
+    await update.effective_message.reply_text(
+        f"switched to topic: `{name}`", parse_mode=ParseMode.MARKDOWN
+    )
 
 
 async def cmd_topics(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -447,7 +476,7 @@ async def cmd_memory(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text("Usage: /memory [memory|user|both]")
         return
     blocks: list[str] = []
-    for which in (("memory", "user") if target == "both" else (target,)):
+    for which in ("memory", "user") if target == "both" else (target,):
         entries = memory_module.list_entries(which)
         cap = memory_module.MEMORY_CAP if which == "memory" else memory_module.USER_CAP
         chars = memory_module.total_chars(which)
@@ -457,7 +486,9 @@ async def cmd_memory(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     text = "\n\n".join(blocks)
     for i in range(0, len(text), TELEGRAM_MAX):
         try:
-            await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN)
+            await update.effective_message.reply_text(
+                text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN
+            )
         except Exception:
             await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX])
 
@@ -467,14 +498,14 @@ async def cmd_journal(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
     n = 5
     if ctx.args:
-        try:
+        with contextlib.suppress(ValueError):
             n = max(1, min(20, int(ctx.args[0])))
-        except ValueError:
-            pass
     text = self_improve_module.read_recent_journal(n)
     for i in range(0, len(text), TELEGRAM_MAX):
         try:
-            await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN)
+            await update.effective_message.reply_text(
+                text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN
+            )
         except Exception:
             await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX])
 
@@ -484,15 +515,15 @@ async def cmd_improve(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
     chat_id = update.effective_chat.id
     await update.effective_message.reply_text("🔄 running self-improvement turn now…")
-    asyncio.create_task(
-        self_improve_module.run_daily(ctx.bot, deliver_to=str(chat_id))
-    )
+    asyncio.create_task(self_improve_module.run_daily(ctx.bot, deliver_to=str(chat_id)))
 
 
 async def cmd_insights(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if not _authorized(update):
         return
-    await update.effective_message.reply_text(usage_module.insights(), parse_mode=ParseMode.MARKDOWN)
+    await update.effective_message.reply_text(
+        usage_module.insights(), parse_mode=ParseMode.MARKDOWN
+    )
 
 
 async def cmd_aliases(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -528,7 +559,9 @@ async def cmd_alias(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if raw.endswith(" -"):
         name = raw[:-2].strip()
         if aliases_module.remove_alias(name):
-            await update.effective_message.reply_text(f"removed alias `{name}`", parse_mode=ParseMode.MARKDOWN)
+            await update.effective_message.reply_text(
+                f"removed alias `{name}`", parse_mode=ParseMode.MARKDOWN
+            )
         else:
             await update.effective_message.reply_text(f"no such alias: {name}")
         return
@@ -587,6 +620,7 @@ async def cmd_providers(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None
     if not _authorized(update):
         return
     from .providers import list_providers
+
     catalog = list_providers()
     lines = ["*Available AI providers* (BYO key for any)"]
     for name, info in catalog.items():
@@ -595,13 +629,17 @@ async def cmd_providers(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None
         configured = "✅" if os.environ.get(env_var) else "  "
         lines.append(f"{configured} `{name}` — {info['label']}")
     lines.append("")
-    lines.append("Switch with `/model <provider> [model]` or globally via OPENGRIFFIN_PROVIDER env.")
+    lines.append(
+        "Switch with `/model <provider> [model]` or globally via OPENGRIFFIN_PROVIDER env."
+    )
     text = "\n".join(lines)
     for i in range(0, len(text), TELEGRAM_MAX):
         try:
-            await update.effective_message.reply_text(text[i:i+TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN)
+            await update.effective_message.reply_text(
+                text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN
+            )
         except Exception:
-            await update.effective_message.reply_text(text[i:i+TELEGRAM_MAX])
+            await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX])
 
 
 async def cmd_model(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -626,6 +664,7 @@ async def cmd_model(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text("reset to default provider")
         return
     from .providers import list_providers
+
     catalog = list_providers()
     provider = ctx.args[0].strip().lower()
     if provider not in catalog:
@@ -651,11 +690,15 @@ async def cmd_personality(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
             text = presets_file.read_text()
             for i in range(0, len(text), TELEGRAM_MAX):
                 try:
-                    await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN)
+                    await update.effective_message.reply_text(
+                        text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN
+                    )
                 except Exception:
                     await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX])
         else:
-            await update.effective_message.reply_text("no presets file. Edit ~/.opengriffin/memories/SOUL.md directly.")
+            await update.effective_message.reply_text(
+                "no presets file. Edit ~/.opengriffin/memories/SOUL.md directly."
+            )
         return
     name = ctx.args[0].strip().lower()
     if not presets_file.is_file():
@@ -663,13 +706,18 @@ async def cmd_personality(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
         return
     text = presets_file.read_text()
     import re as _re
+
     m = _re.search(rf"^## {_re.escape(name)}\s*$([\s\S]*?)(?=^## |\Z)", text, _re.MULTILINE)
     if not m:
-        await update.effective_message.reply_text(f"no preset named '{name}'. /personality with no args lists them.")
+        await update.effective_message.reply_text(
+            f"no preset named '{name}'. /personality with no args lists them."
+        )
         return
     body = m.group(1).strip()
     memory_module.SOUL_FILE.write_text(f"# Personality: {name}\n\n{body}\n")
-    await update.effective_message.reply_text(f"applied personality: *{name}*", parse_mode=ParseMode.MARKDOWN)
+    await update.effective_message.reply_text(
+        f"applied personality: *{name}*", parse_mode=ParseMode.MARKDOWN
+    )
 
 
 async def cmd_recall(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -683,7 +731,9 @@ async def cmd_recall(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     text = recall_module.render(hits)
     for i in range(0, len(text), TELEGRAM_MAX):
         try:
-            await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN)
+            await update.effective_message.reply_text(
+                text[i : i + TELEGRAM_MAX], parse_mode=ParseMode.MARKDOWN
+            )
         except Exception:
             await update.effective_message.reply_text(text[i : i + TELEGRAM_MAX])
 
@@ -694,7 +744,9 @@ async def cmd_sessions(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     archive = topics_module.list_archive(chat_id)
     if not archive:
-        await update.effective_message.reply_text("_(no archived sessions)_", parse_mode=ParseMode.MARKDOWN)
+        await update.effective_message.reply_text(
+            "_(no archived sessions)_", parse_mode=ParseMode.MARKDOWN
+        )
         return
     lines = []
     for entry in archive[:20]:
@@ -736,7 +788,9 @@ async def cmd_status(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     state = progress_module.get(chat_id)
     if state is None or state.finished:
-        await update.effective_message.reply_text("_(no active request)_", parse_mode=ParseMode.MARKDOWN)
+        await update.effective_message.reply_text(
+            "_(no active request)_", parse_mode=ParseMode.MARKDOWN
+        )
         return
     await update.effective_message.reply_text(state.status_text(), parse_mode=ParseMode.MARKDOWN)
 
@@ -800,7 +854,9 @@ async def cmd_rollback(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
 async def cmd_kanban(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if not _authorized(update):
         return
-    await update.effective_message.reply_text(kanban_module.render_board(), parse_mode=ParseMode.MARKDOWN)
+    await update.effective_message.reply_text(
+        kanban_module.render_board(), parse_mode=ParseMode.MARKDOWN
+    )
 
 
 async def cmd_whoami(update: Update, _ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -846,7 +902,7 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await ctx.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
     try:
         reply = await ask_claude_with_progress(chat_id, text, ctx.bot, status_msg)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         msg = (
             f"⏱ Timed out after {progress_module.REQUEST_TIMEOUT_SEC}s. "
             "The Claude subprocess didn't return a final response. "
@@ -891,10 +947,8 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
                 chat_id=chat_id, message_id=status_msg, text=head, parse_mode=ParseMode.MARKDOWN
             )
         except Exception:
-            try:
+            with contextlib.suppress(Exception):
                 await ctx.bot.edit_message_text(chat_id=chat_id, message_id=status_msg, text=head)
-            except Exception:
-                pass
         if len(reply) > TELEGRAM_MAX:
             for i in range(TELEGRAM_MAX, len(reply), TELEGRAM_MAX):
                 chunk = reply[i : i + TELEGRAM_MAX]
@@ -937,7 +991,7 @@ async def on_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         pass
     try:
         reply = await ask_claude_with_progress(chat_id, text, ctx.bot, status)
-    except (asyncio.TimeoutError, asyncio.CancelledError) as e:
+    except (TimeoutError, asyncio.CancelledError) as e:
         await update.effective_message.reply_text(f"voice run aborted: {type(e).__name__}")
         return
     except Exception as e:
@@ -950,7 +1004,7 @@ async def on_voice(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         ogg = await voice_module.synthesize_ogg(short)
         await ctx.bot.send_voice(chat_id=chat_id, voice=ogg)
-    except Exception as e:
+    except Exception:
         log.exception("TTS failed")
     # Always also send the text so nothing is lost.
     await _send_long(update, reply)
@@ -1045,6 +1099,7 @@ async def _post_init(app: Application) -> None:
     # Echo memory nightly consolidation
     try:
         from . import echo_memory as _echo
+
         scheduler.add_job(
             _echo.consolidate_nightly,
             trigger=CronTrigger(hour=IDLE_RESET_HOUR, minute=45),
@@ -1057,6 +1112,7 @@ async def _post_init(app: Application) -> None:
     # Drift detection nightly
     try:
         from . import drift as _drift
+
         scheduler.add_job(
             _drift.detect_drift,
             trigger=CronTrigger(hour=IDLE_RESET_HOUR + 1, minute=0),
@@ -1069,6 +1125,7 @@ async def _post_init(app: Application) -> None:
     # Voice-card refresh weekly
     try:
         from . import soul_sync as _soul
+
         scheduler.add_job(
             _soul.refresh_voice_card,
             trigger=CronTrigger(day_of_week="sun", hour=5, minute=0),
@@ -1081,6 +1138,7 @@ async def _post_init(app: Application) -> None:
     # Ambient triggers from triggers.json
     try:
         from . import triggers as _trig
+
         n = _trig.install_into_scheduler(scheduler)
         if n:
             log.info("Installed %d ambient triggers", n)

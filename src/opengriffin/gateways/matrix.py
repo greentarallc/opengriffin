@@ -15,9 +15,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
-from . import Gateway, Handler, Message, Reply
+from . import Handler, Message
 
 log = logging.getLogger("opengriffin.gateways.matrix")
 
@@ -38,7 +37,7 @@ class MatrixGateway:
             raise RuntimeError("MATRIX_USER_ID + (MATRIX_PASSWORD or MATRIX_ACCESS_TOKEN) required")
         raw = os.environ.get("MATRIX_ALLOWED_USERS", "").strip()
         self._allowed = {x.strip() for x in raw.split(",") if x.strip()}
-        self._client: Optional[object] = None
+        self._client: object | None = None
 
     def _authorized(self, user_id: str) -> bool:
         return not self._allowed or user_id in self._allowed
@@ -68,7 +67,8 @@ class MatrixGateway:
                 user_handle=event.sender,
                 chat_id=room.room_id,
                 text=text,
-                is_dm=room.is_group is False,  # nio doesn't expose DM cleanly; treat all as DM-equivalent
+                is_dm=room.is_group
+                is False,  # nio doesn't expose DM cleanly; treat all as DM-equivalent
                 raw=event,
             )
             try:
@@ -76,12 +76,14 @@ class MatrixGateway:
             except Exception as e:
                 log.exception("handler error")
                 await client.room_send(
-                    room.room_id, "m.room.message",
+                    room.room_id,
+                    "m.room.message",
                     {"msgtype": "m.text", "body": f"Error: {e}"},
                 )
                 return
             await client.room_send(
-                room.room_id, "m.room.message",
+                room.room_id,
+                "m.room.message",
                 {"msgtype": "m.text", "body": reply.text},
             )
 

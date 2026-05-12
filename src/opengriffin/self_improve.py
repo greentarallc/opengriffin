@@ -20,7 +20,6 @@ import datetime as dt
 import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 log = logging.getLogger("opengriffin.self_improve")
 
@@ -101,7 +100,12 @@ def append_journal_entry(entry: str) -> None:
     parts = text.split("\n## ")
     if len(parts) > JOURNAL_MAX_ENTRIES + 1:
         # Keep the header + last N entries
-        text = parts[0].rstrip() + "\n\n## " + "\n## ".join(parts[-JOURNAL_MAX_ENTRIES:]).strip() + "\n"
+        text = (
+            parts[0].rstrip()
+            + "\n\n## "
+            + "\n## ".join(parts[-JOURNAL_MAX_ENTRIES:]).strip()
+            + "\n"
+        )
     JOURNAL_FILE.write_text(text)
 
 
@@ -122,9 +126,7 @@ def read_recent_journal(n: int = 5) -> str:
 def yesterday_stats() -> dict:
     if not USAGE_FILE.is_file():
         return {"runs": 0}
-    cutoff_start = dt.datetime.combine(
-        dt.date.today() - dt.timedelta(days=1), dt.time(0, 0)
-    )
+    cutoff_start = dt.datetime.combine(dt.date.today() - dt.timedelta(days=1), dt.time(0, 0))
     cutoff_end = dt.datetime.combine(dt.date.today(), dt.time(0, 0))
     runs = 0
     cost = 0.0
@@ -160,7 +162,7 @@ def yesterday_stats() -> dict:
 # --- the daily run ---
 
 
-async def run_daily(bot, deliver_to: Optional[str] = None) -> str:
+async def run_daily(bot, deliver_to: str | None = None) -> str:
     """Execute the daily self-improvement turn. Returns a short status string."""
     from . import bot as bot_module  # local import to avoid circular
 

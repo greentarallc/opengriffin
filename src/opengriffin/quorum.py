@@ -65,12 +65,15 @@ PERSONAS = [
 async def vote(action: str, *, context: str = "", n: int = 2, m: int = 3) -> dict:
     """Run the quorum. Returns {decision, votes: [...], approvals, denials}."""
     from . import bot as bot_module
+
     if m < 1 or n < 1 or n > m:
         raise ValueError("invalid n/m")
 
     async def one_vote(persona: str) -> dict:
         prompt = VOTE_PROMPT.format(
-            m=m, n=n, persona=persona,
+            m=m,
+            n=n,
+            persona=persona,
             action=action[:3000],
             context=context[:500],
         )
@@ -96,7 +99,8 @@ async def vote(action: str, *, context: str = "", n: int = 2, m: int = 3) -> dic
     decision = "approve" if approvals >= n else "deny"
     record = {
         "ts": dt.datetime.now().isoformat(timespec="seconds"),
-        "n": n, "m": m,
+        "n": n,
+        "m": m,
         "decision": decision,
         "approvals": approvals,
         "denials": denials,
@@ -136,12 +140,14 @@ async def _vote(args: dict) -> dict:
 async def _audit(args: dict) -> dict:
     if not QUORUM_LOG.is_file():
         return {"content": [{"type": "text", "text": "no votes yet"}]}
-    lines = QUORUM_LOG.read_text().splitlines()[-int(args.get("n") or 10):]
+    lines = QUORUM_LOG.read_text().splitlines()[-int(args.get("n") or 10) :]
     out = []
     for line in lines:
         try:
             r = json.loads(line)
-            out.append(f"[{r.get('ts')}] {r.get('decision')} ({r.get('approvals')}/{r.get('m')}) | {r.get('action_preview','')[:120]}")
+            out.append(
+                f"[{r.get('ts')}] {r.get('decision')} ({r.get('approvals')}/{r.get('m')}) | {r.get('action_preview', '')[:120]}"
+            )
         except Exception:
             continue
     return {"content": [{"type": "text", "text": "\n".join(out)}]}

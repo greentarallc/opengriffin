@@ -12,10 +12,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from claude_agent_sdk import (
     PermissionResultAllow,
@@ -125,10 +124,14 @@ async def can_use_tool(
         [
             [
                 InlineKeyboardButton("✅ Allow once", callback_data=f"appr:once:{req_id}"),
-                InlineKeyboardButton("🟢 Session", callback_data=f"appr:session:{req_id}:{tool_name}"),
+                InlineKeyboardButton(
+                    "🟢 Session", callback_data=f"appr:session:{req_id}:{tool_name}"
+                ),
             ],
             [
-                InlineKeyboardButton("🔵 Always", callback_data=f"appr:always:{req_id}:{tool_name}"),
+                InlineKeyboardButton(
+                    "🔵 Always", callback_data=f"appr:always:{req_id}:{tool_name}"
+                ),
                 InlineKeyboardButton("❌ Deny", callback_data=f"appr:deny:{req_id}"),
             ],
         ]
@@ -151,7 +154,7 @@ async def can_use_tool(
 
     try:
         decision = await asyncio.wait_for(fut, timeout=APPROVAL_TIMEOUT_SEC)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         STATE.pending.pop(req_id, None)
         return PermissionResultDeny(message="approval timed out")
     finally:
@@ -211,7 +214,10 @@ async def callback_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> No
     # Stale: future already resolved, or bot restarted clearing pending.
     if fut is None or fut.done():
         await _safe_answer(q, "(already resolved or expired)")
-        await _safe_edit(q, "\n\n_(this approval is no longer waiting — likely already resolved or the bot restarted)_")
+        await _safe_edit(
+            q,
+            "\n\n_(this approval is no longer waiting — likely already resolved or the bot restarted)_",
+        )
         return
 
     # Resolve the future FIRST. UI feedback is best-effort.

@@ -51,13 +51,38 @@ NATIVE_PROVIDERS = {"claude", "anthropic", "gemini", "cohere", "bedrock", "ollam
 def list_providers() -> dict[str, dict]:
     """Return the full catalog: provider name → {label, models, key_env}."""
     from .openai_compatible import FLAVORS as OAI_FLAVORS
+
     catalog: dict[str, dict] = {
-        "claude":     {"label": "Claude (Agent SDK)", "models": ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"], "key_env": "ANTHROPIC_API_KEY (or Claude Max OAuth)"},
-        "anthropic":  {"label": "Anthropic API",      "models": ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"], "key_env": "ANTHROPIC_API_KEY"},
-        "gemini":     {"label": "Google Gemini",      "models": ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"], "key_env": "GEMINI_API_KEY"},
-        "cohere":     {"label": "Cohere",             "models": ["command-r-plus-08-2024", "command-r-08-2024"], "key_env": "COHERE_API_KEY"},
-        "bedrock":    {"label": "AWS Bedrock",        "models": ["us.anthropic.claude-opus-4-7-v1:0", "meta.llama3-1-405b-instruct-v1:0"], "key_env": "AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY"},
-        "ollama":     {"label": "Ollama (local)",     "models": ["llama3.1", "mistral", "qwen2.5", "deepseek-r1"], "key_env": "(none — local)"},
+        "claude": {
+            "label": "Claude (Agent SDK)",
+            "models": ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"],
+            "key_env": "ANTHROPIC_API_KEY (or Claude Max OAuth)",
+        },
+        "anthropic": {
+            "label": "Anthropic API",
+            "models": ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"],
+            "key_env": "ANTHROPIC_API_KEY",
+        },
+        "gemini": {
+            "label": "Google Gemini",
+            "models": ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
+            "key_env": "GEMINI_API_KEY",
+        },
+        "cohere": {
+            "label": "Cohere",
+            "models": ["command-r-plus-08-2024", "command-r-08-2024"],
+            "key_env": "COHERE_API_KEY",
+        },
+        "bedrock": {
+            "label": "AWS Bedrock",
+            "models": ["us.anthropic.claude-opus-4-7-v1:0", "meta.llama3-1-405b-instruct-v1:0"],
+            "key_env": "AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY",
+        },
+        "ollama": {
+            "label": "Ollama (local)",
+            "models": ["llama3.1", "mistral", "qwen2.5", "deepseek-r1"],
+            "key_env": "(none — local)",
+        },
     }
     for flavor, cfg in OAI_FLAVORS.items():
         catalog[flavor] = {
@@ -82,31 +107,37 @@ def get_provider(name: str | None = None, model: str | None = None) -> ChatProvi
 
     if name == "claude":
         from .claude import ClaudeProvider
+
         return ClaudeProvider()
     if name == "anthropic":
         from .anthropic_api import AnthropicAPIProvider
+
         return AnthropicAPIProvider()
     if name == "gemini":
         from .gemini import GeminiProvider
+
         return GeminiProvider()
     if name == "cohere":
         from .cohere import CohereProvider
+
         return CohereProvider()
     if name == "bedrock":
         from .bedrock import BedrockProvider
+
         return BedrockProvider()
     if name == "ollama":
         from .ollama import OllamaProvider
+
         return OllamaProvider()
 
     # Everything else is OpenAI-compatible
     from .openai_compatible import FLAVORS, OpenAICompatibleProvider
+
     if name in FLAVORS:
         return OpenAICompatibleProvider(flavor=name)
 
     raise ValueError(
-        f"Unknown OPENGRIFFIN_PROVIDER: {name}. "
-        f"Try: {', '.join(sorted(list_providers().keys()))}"
+        f"Unknown OPENGRIFFIN_PROVIDER: {name}. Try: {', '.join(sorted(list_providers().keys()))}"
     )
 
 

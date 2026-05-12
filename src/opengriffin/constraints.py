@@ -100,11 +100,20 @@ def render_for_system_prompt() -> str:
 @tool(
     "constraint_add",
     "Add a HARD constraint the agent must NEVER violate. Use sparingly — these can't be silently overridden.",
-    {"text": Annotated[str, "Constraint, written as an imperative ('Never ...', 'Always ask before ...')"]},
+    {
+        "text": Annotated[
+            str, "Constraint, written as an imperative ('Never ...', 'Always ask before ...')"
+        ]
+    },
 )
 async def _add(args: dict) -> dict:
     ok = add(args["text"])
-    return {"content": [{"type": "text", "text": "added (active next session)" if ok else "duplicate or empty"}], "is_error": not ok}
+    return {
+        "content": [
+            {"type": "text", "text": "added (active next session)" if ok else "duplicate or empty"}
+        ],
+        "is_error": not ok,
+    }
 
 
 @tool(

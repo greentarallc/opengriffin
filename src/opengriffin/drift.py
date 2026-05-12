@@ -14,7 +14,6 @@ import datetime as dt
 import json
 import logging
 from pathlib import Path
-from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -46,6 +45,7 @@ Recent JOURNAL:
 async def detect_drift() -> list[dict]:
     """Run a one-shot Claude analysis of USER.md + recent journal."""
     from . import bot as bot_module  # noqa
+
     user_md_path = Path.home() / ".opengriffin" / "memories" / "USER.md"
     journal_path = Path.home() / ".opengriffin" / "memories" / "JOURNAL.md"
     if not user_md_path.is_file() or not journal_path.is_file():
@@ -103,7 +103,7 @@ async def _check(args: dict) -> dict:
     drifts = await detect_drift()
     if not drifts:
         return {"content": [{"type": "text", "text": "no drift detected"}]}
-    lines = [f"[{d.get('severity','?')}] {d.get('suggestion','?')}" for d in drifts]
+    lines = [f"[{d.get('severity', '?')}] {d.get('suggestion', '?')}" for d in drifts]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 

@@ -25,7 +25,7 @@ import json
 import logging
 import secrets
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 import requests
 from aiohttp import web
@@ -53,8 +53,9 @@ def _save(data: dict) -> None:
 # ----------------------------- caller side -----------------------------
 
 
-def call_remote(remote_url: str, *, prompt: str, max_amount_usd: float = 0,
-                timeout_sec: int = 120) -> dict:
+def call_remote(
+    remote_url: str, *, prompt: str, max_amount_usd: float = 0, timeout_sec: int = 120
+) -> dict:
     """Send a delegated task to another OpenGriffin agent."""
     handshake_url = remote_url.rstrip("/") + "/a2a/handshake"
     delegate_url = remote_url.rstrip("/") + "/a2a/delegate"
@@ -79,7 +80,12 @@ def call_remote(remote_url: str, *, prompt: str, max_amount_usd: float = 0,
             challenge = r.json()
         except Exception:
             challenge = {"raw": r.text}
-        return {"ok": False, "error": "payment required", "challenge": challenge, "remote_profile": remote_profile}
+        return {
+            "ok": False,
+            "error": "payment required",
+            "challenge": challenge,
+            "remote_profile": remote_profile,
+        }
     if r.status_code != 200:
         return {"ok": False, "error": f"remote returned {r.status_code}: {r.text[:300]}"}
 
@@ -96,11 +102,16 @@ def call_remote(remote_url: str, *, prompt: str, max_amount_usd: float = 0,
             if rr.status_code == 200:
                 body = rr.json()
                 if body.get("status") == "done":
-                    return {"ok": True, "result": body.get("result", "")[:5000], "remote_profile": remote_profile}
+                    return {
+                        "ok": True,
+                        "result": body.get("result", "")[:5000],
+                        "remote_profile": remote_profile,
+                    }
         except Exception:
             pass
         # Sleep without await (this is sync from agent's perspective via tool)
         import time
+
         time.sleep(2)
     return {"ok": False, "error": "timed out polling for result"}
 
@@ -144,6 +155,7 @@ async def _handle_delegate(request: web.Request) -> web.Response:
 
 async def _run_delegation(task_id: str, prompt: str) -> None:
     from . import bot as bot_module
+
     data = _load()
     data["tasks"][task_id]["status"] = "running"
     _save(data)
@@ -166,10 +178,12 @@ async def _handle_result(request: web.Request) -> web.Response:
     task = data.get("tasks", {}).get(task_id)
     if not task:
         return web.json_response({"error": "not found"}, status=404)
-    return web.json_response({
-        "status": task["status"],
-        "result": task.get("result"),
-    })
+    return web.json_response(
+        {
+            "status": task["status"],
+            "result": task.get("result"),
+        }
+    )
 
 
 def attach(app: web.Application) -> None:
@@ -182,14 +196,17 @@ def attach(app: web.Application) -> None:
     "a2a_call",
     "Call another OpenGriffin agent over HTTP. Returns its handshake profile + the task result. Use when delegation to a remote agent makes sense (specialist domain, time zone coverage, etc.).",
     {
-        "remote_url": Annotated[str, "Base URL of the remote OpenGriffin (e.g. https://alice.opengriffin.com)"],
+        "remote_url": Annotated[
+            str, "Base URL of the remote OpenGriffin (e.g. https://alice.opengriffin.com)"
+        ],
         "prompt": Annotated[str, "Task to delegate"],
         "max_amount_usd": Annotated[float, "Max budget (0 = free only)"],
     },
 )
 async def _call(args: dict) -> dict:
     result = call_remote(
-        args["remote_url"], prompt=args["prompt"],
+        args["remote_url"],
+        prompt=args["prompt"],
         max_amount_usd=float(args.get("max_amount_usd") or 0),
     )
     return {"content": [{"type": "text", "text": json.dumps(result, indent=2)[:3000]}]}

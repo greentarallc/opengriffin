@@ -20,7 +20,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -44,9 +44,16 @@ def _save_listings(items: list[dict]) -> None:
     LISTINGS_FILE.write_text(json.dumps({"listings": items}, indent=2) + "\n")
 
 
-def add_listing(handle: str, role: str, base_url: str, *, hourly_usd: float = 0.0,
-                unit_usd: float = 0.10, reputation_score: int = 0,
-                description: str = "") -> dict:
+def add_listing(
+    handle: str,
+    role: str,
+    base_url: str,
+    *,
+    hourly_usd: float = 0.0,
+    unit_usd: float = 0.10,
+    reputation_score: int = 0,
+    description: str = "",
+) -> dict:
     items = _load_listings()
     items = [x for x in items if x.get("handle") != handle]
     entry = {
@@ -89,8 +96,9 @@ def _save(data: dict) -> None:
 # ----------------------------- discovery (local-only) -----------------------------
 
 
-def search(*, role: Optional[str] = None, max_hourly_usd: Optional[float] = None,
-           min_reputation: int = 0) -> list[dict]:
+def search(
+    *, role: str | None = None, max_hourly_usd: float | None = None, min_reputation: int = 0
+) -> list[dict]:
     """Filter the LOCAL listings file. No network."""
     out = []
     for L in _load_listings():
@@ -107,8 +115,7 @@ def search(*, role: Optional[str] = None, max_hourly_usd: Optional[float] = None
 # ----------------------------- rental lifecycle -----------------------------
 
 
-def hire(handle: str, *, session_minutes: int, max_usd: float,
-         listing: Optional[dict] = None) -> dict:
+def hire(handle: str, *, session_minutes: int, max_usd: float, listing: dict | None = None) -> dict:
     """Open a rental record locally. Real payment kicks in on each ask."""
     rid = uuid.uuid4().hex[:8]
     rental = {
@@ -116,7 +123,9 @@ def hire(handle: str, *, session_minutes: int, max_usd: float,
         "handle": handle,
         "listing": listing or {},
         "opened_at": dt.datetime.now().isoformat(timespec="seconds"),
-        "expires_at": (dt.datetime.now() + dt.timedelta(minutes=session_minutes)).isoformat(timespec="seconds"),
+        "expires_at": (dt.datetime.now() + dt.timedelta(minutes=session_minutes)).isoformat(
+            timespec="seconds"
+        ),
         "max_usd": max_usd,
         "spent_usd": 0.0,
         "asks": 0,
@@ -128,7 +137,7 @@ def hire(handle: str, *, session_minutes: int, max_usd: float,
     return rental
 
 
-def get(rental_id: str) -> Optional[dict]:
+def get(rental_id: str) -> dict | None:
     return _load().get("rentals", {}).get(rental_id)
 
 
@@ -147,9 +156,7 @@ def is_active(rental: dict) -> bool:
         return False
     if dt.datetime.fromisoformat(rental["expires_at"]) < dt.datetime.now():
         return False
-    if rental["spent_usd"] >= rental["max_usd"]:
-        return False
-    return True
+    return not rental["spent_usd"] >= rental["max_usd"]
 
 
 # ----------------------------- ask / charge -----------------------------
@@ -175,7 +182,8 @@ def ask(rental_id: str, prompt: str) -> dict:
     except Exception:
         from . import a2a as a2a_module
     result = a2a_module.call_remote(
-        base_url, prompt=prompt,
+        base_url,
+        prompt=prompt,
         max_amount_usd=float(rental["max_usd"]) - float(rental["spent_usd"]),
     )
 
@@ -185,7 +193,12 @@ def ask(rental_id: str, prompt: str) -> dict:
     rental["asks"] = rental.get("asks", 0) + 1
     _save(data)
 
-    return {"ok": True, "result": result, "billed_usd": unit, "remaining_usd": rental["max_usd"] - rental["spent_usd"]}
+    return {
+        "ok": True,
+        "result": result,
+        "billed_usd": unit,
+        "remaining_usd": rental["max_usd"] - rental["spent_usd"],
+    }
 
 
 # ----------------------------- agent-callable MCP tools -----------------------------
@@ -198,14 +211,16 @@ def ask(rental_id: str, prompt: str) -> dict:
         "handle": Annotated[str, "Specialist's public handle"],
         "role": Annotated[str, "What they specialize in"],
         "base_url": Annotated[str, "Their A2A base URL"],
-        "hourly_usd": Annotated[Optional[float], "Hourly rate (informational)"],
-        "unit_usd": Annotated[Optional[float], "Per-ask price (default 0.10)"],
-        "description": Annotated[Optional[str], "Free-form description"],
+        "hourly_usd": Annotated[float | None, "Hourly rate (informational)"],
+        "unit_usd": Annotated[float | None, "Per-ask price (default 0.10)"],
+        "description": Annotated[str | None, "Free-form description"],
     },
 )
 async def _add_listing(args: dict) -> dict:
     entry = add_listing(
-        handle=args["handle"], role=args["role"], base_url=args["base_url"],
+        handle=args["handle"],
+        role=args["role"],
+        base_url=args["base_url"],
         hourly_usd=float(args.get("hourly_usd") or 0),
         unit_usd=float(args.get("unit_usd") or 0.10),
         description=args.get("description") or "",
@@ -220,27 +235,37 @@ async def _add_listing(args: dict) -> dict:
 )
 async def _remove_listing(args: dict) -> dict:
     ok = remove_listing(args["handle"])
-    return {"content": [{"type": "text", "text": "removed" if ok else "not found"}], "is_error": not ok}
+    return {
+        "content": [{"type": "text", "text": "removed" if ok else "not found"}],
+        "is_error": not ok,
+    }
 
 
 @tool(
     "marketplace_search",
     "Search your LOCAL marketplace directory for specialists. No network call.",
     {
-        "role": Annotated[Optional[str], "Filter by role ('legal', 'medical', 'tax', 'research', etc.)"],
-        "max_hourly_usd": Annotated[Optional[float], "Max hourly rate"],
-        "min_reputation": Annotated[Optional[int], "Min reputation score 0-100"],
+        "role": Annotated[
+            str | None, "Filter by role ('legal', 'medical', 'tax', 'research', etc.)"
+        ],
+        "max_hourly_usd": Annotated[float | None, "Max hourly rate"],
+        "min_reputation": Annotated[int | None, "Min reputation score 0-100"],
     },
 )
 async def _search(args: dict) -> dict:
     listings = search(
         role=args.get("role"),
-        max_hourly_usd=float(args["max_hourly_usd"]) if args.get("max_hourly_usd") is not None else None,
+        max_hourly_usd=float(args["max_hourly_usd"])
+        if args.get("max_hourly_usd") is not None
+        else None,
         min_reputation=int(args.get("min_reputation") or 0),
     )
     if not listings:
         return {"content": [{"type": "text", "text": "(no listings)"}]}
-    lines = [f"@{L['handle']} — {L.get('role','?')} — ${L.get('hourly_usd','?')}/h — rep {L.get('reputation',{}).get('score','?')}" for L in listings]
+    lines = [
+        f"@{L['handle']} — {L.get('role', '?')} — ${L.get('hourly_usd', '?')}/h — rep {L.get('reputation', {}).get('score', '?')}"
+        for L in listings
+    ]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 
@@ -252,13 +277,17 @@ async def _search(args: dict) -> dict:
         "base_url": Annotated[str, "Their A2A base URL"],
         "session_minutes": Annotated[int, "Session duration cap (minutes)"],
         "max_usd": Annotated[float, "Hard spending cap"],
-        "unit_usd": Annotated[Optional[float], "Per-ask price (defaults to listing or $0.10)"],
+        "unit_usd": Annotated[float | None, "Per-ask price (defaults to listing or $0.10)"],
     },
 )
 async def _hire(args: dict) -> dict:
     listing = {"base_url": args["base_url"], "unit_usd": float(args.get("unit_usd") or 0.10)}
-    rental = hire(args["handle"], session_minutes=int(args["session_minutes"]),
-                  max_usd=float(args["max_usd"]), listing=listing)
+    rental = hire(
+        args["handle"],
+        session_minutes=int(args["session_minutes"]),
+        max_usd=float(args["max_usd"]),
+        listing=listing,
+    )
     return {"content": [{"type": "text", "text": json.dumps(rental, indent=2)}]}
 
 
@@ -272,7 +301,10 @@ async def _hire(args: dict) -> dict:
 )
 async def _ask(args: dict) -> dict:
     result = ask(args["rental_id"], args["prompt"])
-    return {"content": [{"type": "text", "text": json.dumps(result, indent=2)[:3000]}], "is_error": not result.get("ok")}
+    return {
+        "content": [{"type": "text", "text": json.dumps(result, indent=2)[:3000]}],
+        "is_error": not result.get("ok"),
+    }
 
 
 @tool(
@@ -282,7 +314,10 @@ async def _ask(args: dict) -> dict:
 )
 async def _release(args: dict) -> dict:
     ok = release(args["rental_id"])
-    return {"content": [{"type": "text", "text": "released" if ok else "not found"}], "is_error": not ok}
+    return {
+        "content": [{"type": "text", "text": "released" if ok else "not found"}],
+        "is_error": not ok,
+    }
 
 
 @tool(
@@ -295,7 +330,10 @@ async def _list(args: dict) -> dict:
     actives = [r for r in data.get("rentals", {}).values() if is_active(r)]
     if not actives:
         return {"content": [{"type": "text", "text": "(no active rentals)"}]}
-    lines = [f"{r['id']} @{r['handle']} — ${r['spent_usd']:.2f}/${r['max_usd']:.2f} — {r['asks']} asks — until {r['expires_at']}" for r in actives]
+    lines = [
+        f"{r['id']} @{r['handle']} — ${r['spent_usd']:.2f}/${r['max_usd']:.2f} — {r['asks']} asks — until {r['expires_at']}"
+        for r in actives
+    ]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 

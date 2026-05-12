@@ -21,7 +21,7 @@ import json
 import shutil
 import uuid
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
@@ -44,9 +44,14 @@ def _save(data: dict) -> None:
     GEN_FILE.write_text(json.dumps(data, indent=2) + "\n")
 
 
-def spawn(name: str, *, parent_id: Optional[str] = None,
-          inherit_skills: bool = True, inherit_memory_snapshot: bool = True,
-          soul_text: Optional[str] = None) -> dict:
+def spawn(
+    name: str,
+    *,
+    parent_id: str | None = None,
+    inherit_skills: bool = True,
+    inherit_memory_snapshot: bool = True,
+    soul_text: str | None = None,
+) -> dict:
     aid = uuid.uuid4().hex[:8]
     adir = AGENTS_DIR / aid
     adir.mkdir(parents=True, exist_ok=True)
@@ -126,13 +131,15 @@ def descendants(agent_id: str) -> list[dict]:
     "Fork a new agent from a parent (or root). Child inherits SOUL/skills/memory snapshot. Returns agent id used by other modules (workers, pods).",
     {
         "name": Annotated[str, "Agent name"],
-        "parent_id": Annotated[Optional[str], "Parent agent id (omit for root)"],
-        "soul_text": Annotated[Optional[str], "Override SOUL text (otherwise inherits)"],
+        "parent_id": Annotated[str | None, "Parent agent id (omit for root)"],
+        "soul_text": Annotated[str | None, "Override SOUL text (otherwise inherits)"],
     },
 )
 async def _spawn(args: dict) -> dict:
     try:
-        entry = spawn(name=args["name"], parent_id=args.get("parent_id"), soul_text=args.get("soul_text"))
+        entry = spawn(
+            name=args["name"], parent_id=args.get("parent_id"), soul_text=args.get("soul_text")
+        )
     except ValueError as e:
         return {"content": [{"type": "text", "text": str(e)}], "is_error": True}
     return {"content": [{"type": "text", "text": json.dumps(entry, indent=2)}]}
@@ -147,7 +154,9 @@ async def _lineage(args: dict) -> dict:
     chain = lineage(args["agent_id"])
     if not chain:
         return {"content": [{"type": "text", "text": "no such agent"}]}
-    lines = [f"{i}: {a['id']} @{a['name']} ({a.get('created_at','?')})" for i, a in enumerate(chain)]
+    lines = [
+        f"{i}: {a['id']} @{a['name']} ({a.get('created_at', '?')})" for i, a in enumerate(chain)
+    ]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 
@@ -160,7 +169,7 @@ async def _desc(args: dict) -> dict:
     items = descendants(args["agent_id"])
     if not items:
         return {"content": [{"type": "text", "text": "no descendants"}]}
-    lines = [f"{a['id']} @{a['name']} (parent {a.get('parent_id','?')})" for a in items]
+    lines = [f"{a['id']} @{a['name']} (parent {a.get('parent_id', '?')})" for a in items]
     return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
 

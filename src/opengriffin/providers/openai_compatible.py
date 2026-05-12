@@ -14,8 +14,8 @@ from dataclasses import dataclass
 @dataclass
 class FlavorConfig:
     label: str
-    key_env: str            # e.g. "OPENAI_API_KEY"
-    base_url: str | None    # None = OpenAI's default
+    key_env: str  # e.g. "OPENAI_API_KEY"
+    base_url: str | None  # None = OpenAI's default
     default_model: str
     models: list[str]
 
@@ -33,7 +33,14 @@ FLAVORS: dict[str, FlavorConfig] = {
         key_env="OPENROUTER_API_KEY",
         base_url="https://openrouter.ai/api/v1",
         default_model="anthropic/claude-opus-4",
-        models=["anthropic/claude-opus-4", "openai/gpt-4o", "google/gemini-pro-1.5", "deepseek/deepseek-chat", "meta-llama/llama-3.1-405b-instruct", "x-ai/grok-2"],
+        models=[
+            "anthropic/claude-opus-4",
+            "openai/gpt-4o",
+            "google/gemini-pro-1.5",
+            "deepseek/deepseek-chat",
+            "meta-llama/llama-3.1-405b-instruct",
+            "x-ai/grok-2",
+        ],
     ),
     "azure": FlavorConfig(
         label="Azure OpenAI",
@@ -61,35 +68,56 @@ FLAVORS: dict[str, FlavorConfig] = {
         key_env="MISTRAL_API_KEY",
         base_url="https://api.mistral.ai/v1",
         default_model="mistral-large-latest",
-        models=["mistral-large-latest", "mistral-small-latest", "codestral-latest", "ministral-8b-latest"],
+        models=[
+            "mistral-large-latest",
+            "mistral-small-latest",
+            "codestral-latest",
+            "ministral-8b-latest",
+        ],
     ),
     "perplexity": FlavorConfig(
         label="Perplexity",
         key_env="PERPLEXITY_API_KEY",
         base_url="https://api.perplexity.ai",
         default_model="llama-3.1-sonar-large-128k-online",
-        models=["llama-3.1-sonar-large-128k-online", "llama-3.1-sonar-small-128k-online", "llama-3.1-sonar-huge-128k-online"],
+        models=[
+            "llama-3.1-sonar-large-128k-online",
+            "llama-3.1-sonar-small-128k-online",
+            "llama-3.1-sonar-huge-128k-online",
+        ],
     ),
     "together": FlavorConfig(
         label="Together AI",
         key_env="TOGETHER_API_KEY",
         base_url="https://api.together.xyz/v1",
         default_model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
-        models=["meta-llama/Llama-3.3-70B-Instruct-Turbo", "Qwen/Qwen2.5-72B-Instruct-Turbo", "deepseek-ai/DeepSeek-V3"],
+        models=[
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "Qwen/Qwen2.5-72B-Instruct-Turbo",
+            "deepseek-ai/DeepSeek-V3",
+        ],
     ),
     "groq": FlavorConfig(
         label="Groq",
         key_env="GROQ_API_KEY",
         base_url="https://api.groq.com/openai/v1",
         default_model="llama-3.3-70b-versatile",
-        models=["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"],
+        models=[
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+            "gemma2-9b-it",
+        ],
     ),
     "fireworks": FlavorConfig(
         label="Fireworks AI",
         key_env="FIREWORKS_API_KEY",
         base_url="https://api.fireworks.ai/inference/v1",
         default_model="accounts/fireworks/models/llama-v3p1-405b-instruct",
-        models=["accounts/fireworks/models/llama-v3p1-405b-instruct", "accounts/fireworks/models/qwen2p5-72b-instruct"],
+        models=[
+            "accounts/fireworks/models/llama-v3p1-405b-instruct",
+            "accounts/fireworks/models/qwen2p5-72b-instruct",
+        ],
     ),
     "cerebras": FlavorConfig(
         label="Cerebras",
