@@ -9,8 +9,8 @@ Storage: identity.json
   "accounts": {
     "alice": {
       "platforms": {
-        "telegram": "1291937677",
-        "discord":  "298734590823745",
+        "telegram": "YOUR_TELEGRAM_CHAT_ID",
+        "discord":  "YOUR_DISCORD_USER_ID",
         "email":    "alice@example.com"
       },
       "created_at": "...",

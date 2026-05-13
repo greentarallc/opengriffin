@@ -1,97 +1,84 @@
 # Migration
 
-Coming from Hermes Agent or OpenClaw? Built-in migration imports memory, cron jobs, and recent sessions in one command.
+`griffin migrate` ports state from a prior agent runtime into OpenGriffin's
+canonical `~/.opengriffin/` layout. Each subcommand reads a known source
+directory and writes into the destination paths below. All importers are
+idempotent.
 
-## From Hermes Agent
+## Available importers
 
-```bash
-griffin migrate from-hermes
-# or with a custom source
-griffin migrate from-hermes --src ~/.hermes
-```
+Run `griffin migrate --help` to see every importer registered in your install.
 
-What gets ported:
+### `griffin migrate from-hermes`
 
-| Hermes source | Destination | Notes |
+Imports from a Hermes Agent install. Source defaults to `~/.hermes`; override
+with `--src <path>`.
+
+| Source | Destination | Notes |
 |---|---|---|
-| `~/.hermes/memories/MEMORY.md` | `~/.opengriffin/memories/MEMORY.md` | Merged with `§` separator if existing |
-| `~/.hermes/memories/USER.md` | `~/.opengriffin/memories/USER.md` | Same merge logic |
-| `~/.hermes/memories/SOUL.md` | `~/.opengriffin/memories/SOUL.md` | Same merge logic |
-| `~/.hermes/cron/jobs.json` | `~/.opengriffin/jobs.json` | Schema translated to OpenGriffin format |
-| `~/.hermes/channel_directory.json` | `identity.json` | Per-platform handles linked to a single account |
-| `~/.hermes/state.db` | `echo memory recent tier` | Last 50 user messages imported as previews |
-| `~/.hermes/scripts/*.py` | `~/.opengriffin/scripts/` | Pre-run scripts for cron jobs |
+| `<src>/memories/MEMORY.md` | `~/.opengriffin/memories/MEMORY.md` | Merged with `§` separator if existing |
+| `<src>/memories/USER.md` | `~/.opengriffin/memories/USER.md` | Same merge logic |
+| `<src>/memories/SOUL.md` | `~/.opengriffin/memories/SOUL.md` | Same merge logic |
+| `<src>/cron/jobs.json` | `~/.opengriffin/jobs.json` | Schema translated to OpenGriffin format |
+| `<src>/channel_directory.json` | `~/.opengriffin/identity.json` | Per-platform handles linked to a single account |
+| `<src>/state.db` | `echo memory recent tier` | Last 50 user messages imported as previews |
+| `<src>/scripts/*.py` | `~/.opengriffin/scripts/` | Pre-run scripts for cron jobs |
 
-The migration is **idempotent** — safe to run twice. Existing entries aren't duplicated (merge respects the `§` separator).
+The importer does NOT delete the source install. Both layouts can coexist.
 
-### What's NOT ported
+### `griffin migrate from-openclaw`
 
-- Hermes-specific gateways (Discord, Slack, etc.) — re-configure these in OpenGriffin's `.env`
-- Atropos RL training data — research-grade, no analog
-- Tirith pre-execution policies — replaced by `security_scan`
-- FTS5 session search — OpenGriffin has substring search; FTS index is on the roadmap
-- Container sandboxes (Docker / Modal / Daytona) — not in OSS Core
+Imports from an OpenClaw install. Source defaults to `~/.openclaw`; override
+with `--src <path>`.
 
-### After migration
-
-```bash
-opengriffin doctor                          # confirm provider + token
-cat ~/.opengriffin/memories/MEMORY.md       # eyeball
-opengriffin run                              # start fresh
-```
-
-The migration tool DOES NOT delete the Hermes install. Both can coexist.
-
-## From OpenClaw
-
-```bash
-griffin migrate from-openclaw
-# or with a custom source
-griffin migrate from-openclaw --src ~/.openclaw
-```
-
-What gets ported:
-
-| OpenClaw source | Destination | Notes |
+| Source | Destination | Notes |
 |---|---|---|
-| `memory.md` (or `memories/MEMORY.md`) | `~/.opengriffin/memories/MEMORY.md` | Merged with separator |
-| `*.skill.md` files (anywhere) | `~/.claude/skills/<name>/SKILL.md` | Frontmatter auto-added if missing |
-| `config.{yaml,toml,json}` | `~/.opengriffin/openclaw.{ext}.imported` | Saved for manual review (no auto-translate) |
+| `<src>/memory.md` or `<src>/memories/MEMORY.md` | `~/.opengriffin/memories/MEMORY.md` | Merged with separator |
+| `<src>/**/*.skill.md` | `~/.claude/skills/<name>/SKILL.md` | Frontmatter auto-added if missing |
+| `<src>/config.{yaml,toml,json}` | `~/.opengriffin/openclaw.{ext}.imported` | Saved verbatim — no auto-translate |
 
-### What's NOT ported
+Config files are saved alongside the imported state for manual review rather
+than translated, since config syntax differs meaningfully across tools.
 
-OpenClaw's config syntax differs from OpenGriffin's. We save the imported config to a side file rather than auto-translating; you decide what to copy over.
+## Hosted SaaS (ChatGPT Plus, Claude Pro, etc.)
+
+Hosted services rarely expose full conversation history. Best path:
+
+1. Export what you can via the vendor's account → data-export flow.
+2. Hand-curate the most durable preferences into `~/.opengriffin/memories/USER.md`.
+3. Don't try to import every chat — most of it isn't useful long-term.
+
+The 4:30am self-improvement loop will rebuild the high-leverage memory
+automatically as you use OpenGriffin.
 
 ## Manual migration from anywhere
 
-Both tools rely on plain markdown for state. If your previous tool stored memory in any markdown file, you can hand-merge it:
+If your previous tool stored memory as plain markdown, append it directly:
 
 ```bash
-# Append to MEMORY.md with a separator
-echo "" >> ~/.opengriffin/memories/MEMORY.md
+echo ""  >> ~/.opengriffin/memories/MEMORY.md
 echo "§" >> ~/.opengriffin/memories/MEMORY.md
-echo "" >> ~/.opengriffin/memories/MEMORY.md
+echo ""  >> ~/.opengriffin/memories/MEMORY.md
 cat /path/to/old/memory.md >> ~/.opengriffin/memories/MEMORY.md
 ```
 
 Or split into entries first (one fact per `§` block) for cleaner consolidation later.
 
-## Coming from a hosted SaaS (ChatGPT Plus, Claude Pro, etc.)
+## After any migration
 
-These tools generally don't expose your full history. Best path:
+```bash
+opengriffin doctor                          # confirm provider + token are visible
+cat ~/.opengriffin/memories/MEMORY.md       # eyeball the merge
+opengriffin run                             # start fresh
+```
 
-1. Export what you can via their UI (account → data export)
-2. Hand-curate the most durable preferences into `~/.opengriffin/memories/USER.md`
-3. Don't try to import every chat — most of it isn't useful long-term
+## Adding a new importer
 
-The 4:30am self-improvement loop will rebuild the high-leverage memory automatically as you use OpenGriffin.
+If you'd like to support another previous runtime (LangChain Memory, AutoGPT,
+Letta, MemGPT, etc.), see [CONTRIBUTING.md](../CONTRIBUTING.md). The pattern is:
 
-## Adding a migration source
+1. Add a function to `src/opengriffin/migrate.py` named `_port_<source>_<artifact>`.
+2. Register a typer subcommand `from-<source>` that calls them in order.
+3. Document the schema mapping in this file.
 
-If you'd like to support another tool (LangChain Memory, AutoGPT, Letta, MemGPT, etc.), see [CONTRIBUTING.md](../CONTRIBUTING.md). The pattern is:
-
-1. Add a new function to `src/opengriffin/migrate.py` named `_port_<source>_<artifact>`
-2. Register a typer subcommand `from-<source>` that calls them in order
-3. Document the schema mapping in this file
-
-PR welcome.
+PRs welcome.

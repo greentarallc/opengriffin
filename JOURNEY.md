@@ -4,7 +4,7 @@
 
 It started as a workaround.
 
-In late 2025 I was leaning on Hermes — a Telegram bridge for Claude — when it hit a wall. Claude Max billing limits started biting hard, mid-conversation, and the bridge had no graceful way to drop down to a cheaper model or queue. I cracked it open intending to add a fallback. An hour in I had a fork. By the end of the weekend I had a fresh repo and the realization that I didn't want a patched bridge — I wanted a long-running agent of my own.
+In late 2025 I was running a Telegram bridge for Claude that someone else had written. It hit a wall. Claude Max billing limits started biting hard, mid-conversation, and the bridge had no graceful way to drop down to a cheaper model or queue. I cracked it open intending to add a fallback. An hour in I had a fork. By the end of the weekend I had a fresh repo and the realization that I didn't want a patched bridge — I wanted a long-running agent of my own.
 
 So I built one. Plain Python, [`python-telegram-bot`](https://python-telegram-bot.org/), and the [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python) underneath. The first version could read a message, call a tool, and reply. It had no memory, no schedule, no skills. It forgot everything between turns. But it ran on my own keys, on my own machine, and it didn't fall over when Anthropic threw 429s.
 

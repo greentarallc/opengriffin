@@ -91,7 +91,7 @@ Good first issues are tagged [`good first issue`](https://github.com/greentarall
 | **Provider adapters** | Each new backend in `src/opengriffin/providers/` adds dozens of models. Adapter shape is consistent — copy `openai.py` and rewire base URL + auth. |
 | **Gateway adapters** | `src/opengriffin/gateways/` is where new platforms (Mastodon, IRC, Twilio SMS) plug in. The `Message` interface is the contract. |
 | **Bundled skills** | Pure markdown. Add Apache-2.0-licensed skills in `bundled_skills/<name>/SKILL.md`. They ship in the next release. |
-| **Migration importers** | `src/opengriffin/migrate.py` already handles Hermes and OpenClaw — add more sources (LangChain Memory, AutoGPT runs, Letta, etc.). |
+| **Migration importers** | `src/opengriffin/migrate.py` ships importers for prior agent runtimes — add more sources (LangChain Memory, AutoGPT runs, Letta, etc.). |
 | **Docs** | The agent space moves fast. Out-of-date docs are worse than missing docs. PRs welcome. |
 | **Performance** | Cold-start time, memory loading speed, dashboard SSE throughput — all measurable, all improvable. |
 

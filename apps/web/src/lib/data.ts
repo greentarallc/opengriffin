@@ -306,12 +306,8 @@ export const faqs: { q: string; a: React.ReactNode }[] = [
     a: "Yes — Apache 2.0, free forever, self-hosted. You bring your own AI provider key and pay that provider directly. There is no OpenGriffin subscription, ever, on the OSS path.",
   },
   {
-    q: "What's the difference vs Hermes Agent?",
-    a: "OpenGriffin is a strict superset on memory (Echo Memory + receipts + dream cycle), self-improvement (daily journal + skill graph + drift detection), security (capability tokens + critic + Merkle audit + dead-man's switch), autonomy (worker pool + agent pods + genealogy + time-locked actions), and infrastructure (no backend, 21 providers, 7 platforms). Hermes has 14 messaging gateways and Atropos RL training; we don't (yet).",
-  },
-  {
-    q: "What's the difference vs OpenClaw?",
-    a: "OpenClaw is a thin CLI wrapper. OpenGriffin is a long-running agent with persistent memory, scheduled work, sub-agent spawning, multi-platform delivery, and a self-improvement loop. We ship a one-line migration tool to import OpenClaw state.",
+    q: "How is OpenGriffin different from other personal AI agents?",
+    a: "OpenGriffin is built around compounding: a daily journal, a dream cycle that distills lessons overnight, drift detection on the agent's own behavior, and a skill graph that the agent edits itself. It runs locally, signs every consequential action, and ships with a Merkle audit log, capability tokens, a critic, and a dead-man's switch. Other runtimes ship subsets of this — none ship all of it.",
   },
   {
     q: "What's the difference vs a hosted multi-model dashboard?",

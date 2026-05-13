@@ -12,7 +12,7 @@ Config format (webhooks.json):
     {
       "path": "github",
       "secret_env": "GITHUB_WEBHOOK_SECRET",
-      "deliver_to": "1291937677",
+      "deliver_to": "YOUR_TELEGRAM_CHAT_ID",
       "mode": "deliver",
       "template": "GitHub: {{ headers['X-GitHub-Event'] }} on {{ body['repository']['full_name'] }}"
     }

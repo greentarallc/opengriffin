@@ -161,16 +161,18 @@ Logged to `~/.opengriffin/drift.jsonl`. Use `drift_check` on demand or wait for 
 - Claude Agent SDK stores transcripts under `~/.claude/projects/<encoded-cwd>/<session_id>.jsonl`
 - After daily 4am reset, the previous session is *archived* (still readable via `/sessions` and `/resume <id>`), not deleted
 
-## Importing from Hermes / OpenClaw
+## Importing memory from a prior runtime
 
-Both formats are supported:
+Use the migration importers documented in [migration.md](migration.md):
 
 ```bash
-griffin migrate from-hermes              # ~/.hermes/memories/* + ~/.hermes/state.db
-griffin migrate from-openclaw            # ~/.openclaw/memory.md + skills
+griffin migrate --list                   # show every available importer
+griffin migrate from-<source>            # run one
 ```
 
-See [migration.md](migration.md) for details.
+Each importer ports MEMORY/USER/SOUL into the canonical
+`~/.opengriffin/memories/` layout, merging with `§` separators so re-runs
+don't duplicate.
 
 ## Editing memory by hand
 

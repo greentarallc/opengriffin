@@ -10,9 +10,8 @@ Matches against:
 
 Designed to be called BEFORE the agent's tool runs — fail closed on hits.
 
-This is the equivalent of Hermes' Tirith with extras: opt-in allowlists,
-homograph detection, and a tiny LLM second-opinion when patterns are
-ambiguous.
+Acts as a pre-execution scanner with opt-in allowlists, homograph
+detection, and a tiny LLM second-opinion when patterns are ambiguous.
 """
 
 from __future__ import annotations

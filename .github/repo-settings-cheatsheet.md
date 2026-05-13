@@ -5,7 +5,7 @@ Paste-ready values for https://github.com/greentarallc/opengriffin/settings.
 ## About → Description
 
 ```
-Self-evolving personal AI agent. Telegram-first. 21 providers BYO key. 30 features Hermes and OpenClaw don't have. Free forever. Apache 2.0.
+Self-evolving personal AI agent. Telegram-first. Multi-provider BYO key. Persistent memory, daily journal, skill graph, dream cycle. Free forever. Apache 2.0.
 ```
 
 ## About → Website
@@ -17,7 +17,7 @@ https://opengriffin.com
 ## About → Topics (comma-separated)
 
 ```
-ai, agent, claude, anthropic, telegram-bot, llm, oss, apache2, python, mcp, model-context-protocol, personal-assistant, self-hosted, byo-key, autonomous-agents, openai, gemini, deepseek, agentic, hermes-alternative
+ai, agent, claude, anthropic, telegram-bot, llm, oss, apache2, python, mcp, model-context-protocol, personal-assistant, self-hosted, byo-key, autonomous-agents, openai, gemini, deepseek, agentic, self-improving
 ```
 
 ## Settings → General → Features

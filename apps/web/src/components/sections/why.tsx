@@ -3,10 +3,10 @@
 import { Reveal, RevealItem } from "@/components/motion/scroll-reveal";
 
 const stops = [
-  "Hermes and OpenClaw remember, but don't self-evolve — no journal, no skill graph, no drift detection",
+  "Most agent runtimes remember, but don't self-evolve — no daily journal, no skill graph, no drift detection",
   "Multi-model chat dashboards are great UIs, not agents — they don't run cron, spawn sub-agents, or act between your messages",
   "Hosted assistants put your prompts and outputs on someone else's servers and ride someone else's uptime",
-  "None of them ship a critic, capability tokens, Merkle audit, or a dead-man's switch",
+  "Few ship a critic, capability tokens, Merkle audit, or a dead-man's switch",
 ];
 
 const answers = [

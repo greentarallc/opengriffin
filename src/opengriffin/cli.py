@@ -18,7 +18,9 @@ app = typer.Typer(
 try:
     from . import migrate as _migrate_module
 
-    app.add_typer(_migrate_module.app, name="migrate", help="Import from Hermes or OpenClaw")
+    app.add_typer(
+        _migrate_module.app, name="migrate", help="Import state from a prior agent runtime"
+    )
 except Exception:
     pass
 

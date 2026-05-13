@@ -17,13 +17,12 @@
       "prompt": "[SILENT] Internally review last week's journal entries, identify three patterns, and persist them via memory_add. Also check stalled kanban tasks older than 5 days and surface them in chat."
     },
     {
-      "id": "fincept-market-alert",
-      "name": "Fincept market radar alert",
+      "id": "morning-research-brief",
+      "name": "Morning research brief",
       "schedule": "0 9 * * 1-5",
       "enabled": false,
       "deliver_to": "YOUR_TELEGRAM_CHAT_ID",
-      "pre_script": "scripts/fincept_market_alert.py",
-      "prompt": "Send a concise read-only market radar alert. The pre-run script output above contains the full alert text. Preserve the content; no financial advice; no buy/sell recommendations."
+      "prompt": "Pull a 3-bullet research brief on whatever topic I starred in MEMORY.md yesterday. Cite sources. No speculation."
     }
   ]
 }

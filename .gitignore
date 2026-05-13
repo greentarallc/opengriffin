@@ -22,17 +22,19 @@ env/
 .env.*
 !.env.example
 
-# Persistent state (per-deployment)
+# Persistent state (per-deployment) — match at any depth so nested
+# package state like `src/opengriffin/memories/JOURNAL.md` is also ignored.
 sessions.json
 kanban.json
 aliases.json
 usage.jsonl
 webhooks.json
 checkpoints/
-memories/MEMORY.md
-memories/USER.md
-memories/SOUL.md
-memories/JOURNAL.md
+**/memories/MEMORY.md
+**/memories/USER.md
+**/memories/SOUL.md
+**/memories/JOURNAL.md
+**/memories/VOICE.md
 
 # Whitelist build/proof artifacts that share names with runtime files
 !dogfood/kanban.json

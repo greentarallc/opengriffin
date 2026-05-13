@@ -12,7 +12,7 @@ Workers run as asyncio tasks inside the bot process. They poll their queue
 every N seconds, claim a task, run it, write the result to a results file,
 and check in to the home chat at configurable intervals.
 
-This closes the "team of developers" gap with Hermes. A user can:
+This gives you a "team of developers" pattern. A user can:
   - "Spawn a research worker named atlas to compile a report on X"
   - "Hand off the kanban research-pod tasks to atlas"
   - "Give me a status report from all workers"

@@ -6,7 +6,7 @@ different SOUL or model). Each votes approve/deny/abstain. Action proceeds
 only with N agreeing approvals.
 
 Reduces single-point failure of one agent being prompt-injected or
-hallucinating a bad action. Hermes/OpenClaw don't have this.
+hallucinating a bad action.
 
 Default: 2-of-3 with Claude/GPT/Gemini as the three judges (or three
 Claude instances with different SOUL files if multi-provider keys aren't

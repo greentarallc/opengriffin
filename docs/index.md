@@ -12,7 +12,7 @@ cover the deeper topics.
 - [Memory](memory.md) — MEMORY/USER/SOUL/CONSTRAINTS, Echo Memory, the daily journal
 - [Security](security.md) — capability tokens, critic, attestation, dead-man's switch
 - [Cron + Triggers](cron.md) — scheduled work and ambient signal mesh
-- [Migration](migration.md) — importing from Hermes Agent and OpenClaw
+- [Migration](migration.md) — importers for state from prior agent runtimes
 - [Configuration](configuration.md) — every env var and config file
 
 ## Quick links
@@ -21,4 +21,4 @@ cover the deeper topics.
 - Config example: [`.env.example`](../.env.example)
 - Bundled skills: [`bundled_skills/`](../bundled_skills/)
 - Example configs: [`examples/`](../examples/)
-- Migration tool: `griffin migrate from-hermes` / `griffin migrate from-openclaw`
+- Migration tool: `griffin migrate --list` to see all importers

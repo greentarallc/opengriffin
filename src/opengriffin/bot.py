@@ -46,6 +46,7 @@ from . import checkpoints as checkpoints_module
 from . import cron as cron_module
 from . import kanban as kanban_module
 from . import memory as memory_module
+from . import paths as paths_module
 from . import progress as progress_module
 from . import recall as recall_module
 from . import self_improve as self_improve_module
@@ -56,11 +57,18 @@ from . import voice as voice_module
 from . import webhooks as webhooks_module
 from .redact import redact
 
-# Look for .env in: CWD, ~/.config/opengriffin/, or wherever OPENGRIFFIN_HOME points.
+# Auto-migrate state from the legacy ~/claude-bot/ layout if present.
+# Idempotent — skips anything that already exists at the new location.
+paths_module.migrate_legacy_state()
+
+# Look for .env in priority order: OG_HOME/.env (canonical), CWD (dev
+# convenience for `git clone && drop .env in the repo root && opengriffin run`),
+# legacy XDG location. First hit wins so there's no ambiguity about which
+# file the bot is reading.
 for _p in (
+    paths_module.ENV_FILE,
     Path.cwd() / ".env",
     Path.home() / ".config" / "opengriffin" / ".env",
-    Path(os.environ.get("OPENGRIFFIN_HOME", str(Path.home() / "opengriffin"))) / ".env",
 ):
     if _p.is_file():
         load_dotenv(_p)
@@ -160,6 +168,57 @@ def build_mcp_servers() -> dict:
         from . import reputation
 
         servers["reputation"] = reputation.REPUTATION_SERVER
+    except Exception:
+        pass
+    # Frontier features (post-30): predictive world model + counterfactual twin,
+    # inverse-safety proofs, generative UI, mesa-cognition supervisor,
+    # skill leasing, personal causal layer, adversarial market.
+    try:
+        from . import world_model
+
+        servers["world_model"] = world_model.WORLD_MODEL_SERVER
+    except Exception:
+        pass
+    try:
+        from . import twin
+
+        servers["twin"] = twin.TWIN_SERVER
+    except Exception:
+        pass
+    try:
+        from . import proofs
+
+        servers["proofs"] = proofs.PROOFS_SERVER
+    except Exception:
+        pass
+    try:
+        from . import gen_ui
+
+        servers["gen_ui"] = gen_ui.GEN_UI_SERVER
+    except Exception:
+        pass
+    try:
+        from . import mesa
+
+        servers["mesa"] = mesa.MESA_SERVER
+    except Exception:
+        pass
+    try:
+        from . import skill_lease
+
+        servers["skill_lease"] = skill_lease.LEASE_SERVER
+    except Exception:
+        pass
+    try:
+        from . import causal
+
+        servers["causal"] = causal.CAUSAL_SERVER
+    except Exception:
+        pass
+    try:
+        from . import adversarial
+
+        servers["adversarial"] = adversarial.ADV_SERVER
     except Exception:
         pass
     # Playwright via npx — only register if npm is available; the SDK will
@@ -1144,6 +1203,45 @@ async def _post_init(app: Application) -> None:
             log.info("Installed %d ambient triggers", n)
     except Exception:
         log.exception("trigger install failed")
+    # Personal World Model — nightly retrain
+    try:
+        from . import world_model as _wm
+
+        scheduler.add_job(
+            _wm.train,
+            trigger=CronTrigger(hour=IDLE_RESET_HOUR + 1, minute=15),
+            id="__world_model_train",
+            name="world model nightly retrain",
+            replace_existing=True,
+        )
+    except Exception:
+        pass
+    # Mesa-cognition supervisor — nightly drift report
+    try:
+        from . import mesa as _mesa
+
+        scheduler.add_job(
+            _mesa.run_report,
+            trigger=CronTrigger(hour=IDLE_RESET_HOUR + 1, minute=30),
+            id="__mesa_report",
+            name="mesa-cognition drift report",
+            replace_existing=True,
+        )
+    except Exception:
+        pass
+    # Causal layer — daily edge discovery from world-model log
+    try:
+        from . import causal as _causal
+
+        scheduler.add_job(
+            _causal.discover_from_world_model,
+            trigger=CronTrigger(hour=IDLE_RESET_HOUR + 1, minute=45),
+            id="__causal_discover",
+            name="causal edge discovery",
+            replace_existing=True,
+        )
+    except Exception:
+        pass
     scheduler.start()
     botctx.set_context(
         bot=app.bot,
