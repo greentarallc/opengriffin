@@ -62,10 +62,14 @@ huggingface = ["openai>=1.50"]
 # Free gateways
 discord = ["discord.py>=2.4"]
 slack = ["slack-bolt>=1.20"]
-matrix = ["matrix-nio[e2e]>=0.25"]
+# Matrix without e2e — keeps the install simple. Users who want end-to-end
+# encryption can `pip install matrix-nio[e2e]` separately; that pulls in
+# python-olm which requires libolm headers and breaks fresh installs in CI.
+matrix = ["matrix-nio>=0.25"]
 # email / imessage / signal use stdlib + system tools — no extras needed
 
-# Install everything
+# Install everything bundled in the OSS Core. e2e for matrix is intentionally
+# excluded — same reason as above.
 all = [
     "anthropic>=0.40",
     "google-generativeai>=0.8",
@@ -75,7 +79,7 @@ all = [
     "openai>=1.50",
     "discord.py>=2.4",
     "slack-bolt>=1.20",
-    "matrix-nio[e2e]>=0.25",
+    "matrix-nio>=0.25",
 ]
 
 dev = [
